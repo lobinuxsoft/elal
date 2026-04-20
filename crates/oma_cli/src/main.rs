@@ -1,6 +1,7 @@
 //! `oma` — oh-my-agent command-line entry point.
 
 use clap::{Parser, Subcommand};
+use oma_provider::ComputeBackend;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -33,16 +34,26 @@ async fn main() -> anyhow::Result<()> {
         .with_env_filter(tracing_subscriber::EnvFilter::new(&cli.log_level))
         .init();
 
-    tracing::info!(backend = oma_provider::BACKEND, "oma starting");
-
     match cli.command.unwrap_or(Command::Tui) {
         Command::Tui => {
             tracing::info!("TUI mode not implemented yet — see issue #7");
         }
-        Command::Doctor => {
-            tracing::info!("Doctor subcommand not implemented yet — see issue #9");
-        }
+        Command::Doctor => run_doctor(),
     }
 
     Ok(())
+}
+
+fn run_doctor() {
+    let backend = ComputeBackend::compiled();
+    println!("oma {}", env!("CARGO_PKG_VERSION"));
+    println!("  compute backend : {backend} ({})", backend.describe());
+    println!("  os              : {}", std::env::consts::OS);
+    println!("  arch            : {}", std::env::consts::ARCH);
+    println!(
+        "  models dir      : {}",
+        dirs::data_dir()
+            .map(|d| d.join("oh-my-agent").join("models").display().to_string())
+            .unwrap_or_else(|| "<unknown>".into())
+    );
 }
