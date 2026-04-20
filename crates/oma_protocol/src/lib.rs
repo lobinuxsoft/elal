@@ -1,4 +1,17 @@
-//! `oma_protocol` — stub crate for oh-my-agent.
+//! `oma_protocol` — wire-format types shared across the workspace.
 //!
-//! See GitHub issues for the roadmap:
-//! <https://github.com/lobinuxsoft/oh-my-agent/issues>.
+//! Pure data types only: no runtime state, no I/O, no async.
+//! Everything here is serde-serializable and OpenAI-Chat-Completions-compatible
+//! where applicable.
+
+mod identifiers;
+mod message;
+mod response;
+mod role;
+mod tool_schema;
+
+pub use identifiers::{MessageId, SessionId, ToolCallId};
+pub use message::{FunctionCall, Message, ToolCall};
+pub use response::{ResponseContent, StopReason, Usage};
+pub use role::Role;
+pub use tool_schema::{FunctionDefinition, ToolDefinition};
