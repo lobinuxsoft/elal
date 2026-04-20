@@ -1,0 +1,112 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/oma_core",
+    "crates/oma_protocol",
+    "crates/oma_provider",
+    "crates/oma_tools",
+    "crates/oma_tasks",
+    "crates/oma_safety",
+    "crates/oma_mcp",
+    "crates/oma_client",
+    "crates/oma_server",
+    "crates/oma_tui",
+    "crates/oma_cli",
+    "crates/oma_utils",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+rust-version = "1.85"
+authors = ["lobinuxsoft"]
+repository = "https://github.com/lobinuxsoft/oh-my-agent"
+
+[workspace.dependencies]
+# Internal crates
+oma_core     = { path = "crates/oma_core" }
+oma_protocol = { path = "crates/oma_protocol" }
+oma_provider = { path = "crates/oma_provider" }
+oma_tools    = { path = "crates/oma_tools" }
+oma_tasks    = { path = "crates/oma_tasks" }
+oma_safety   = { path = "crates/oma_safety" }
+oma_mcp      = { path = "crates/oma_mcp" }
+oma_client   = { path = "crates/oma_client" }
+oma_server   = { path = "crates/oma_server" }
+oma_tui      = { path = "crates/oma_tui" }
+oma_utils    = { path = "crates/oma_utils" }
+
+# LLM inference (embedded) — Vulkan default, ROCm feature-gated (ADR-1, ADR-2)
+llama-cpp-2 = { version = "0.1", default-features = false, features = ["sampler", "openmp"] }
+
+# Async runtime
+tokio         = { version = "1", features = ["full"] }
+tokio-stream  = "0.1"
+futures       = "0.3"
+async-trait   = "0.1"
+async-stream  = "0.3"
+
+# HTTP (HF downloads + web tools ONLY, NEVER for LLM inference — ADR-2)
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+
+# Serialization
+serde      = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml       = "0.8"
+
+# Error handling
+thiserror = "2"
+anyhow    = "1"
+
+# Logging
+tracing            = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+tracing-appender   = "0.2"
+
+# TUI
+ratatui       = "0.30"
+crossterm     = { version = "0.28", features = ["event-stream"] }
+unicode-width = "0.2"
+textwrap      = "0.16"
+
+# CLI
+clap = { version = "4", features = ["derive", "env"] }
+
+# File operations
+walkdir  = "2"
+globwalk = "0.9"
+similar  = "2"
+glob     = "0.3"
+
+# Syntax highlighting
+syntect = "5"
+
+# HTML/Web
+scraper = "0.22"
+htmd    = "0.2"
+
+# Progress bars
+indicatif = "0.17"
+
+# Misc
+dirs         = "6"
+uuid         = { version = "1", features = ["serde", "v4", "v7"] }
+chrono       = { version = "0.4", features = ["serde"] }
+bytes        = "1"
+regex        = "1"
+smol_str     = { version = "0.3", features = ["serde"] }
+tempfile     = "3"
+schemars     = "0.8"
+strum        = "0.27"
+strum_macros = "0.28"
+
+[profile.release]
+opt-level = 3
+lto       = "thin"
+codegen-units = 1
+strip = "symbols"
+
+[profile.dev]
+opt-level = 0
+debug     = true

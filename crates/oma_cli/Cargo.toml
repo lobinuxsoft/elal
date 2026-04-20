@@ -1,0 +1,23 @@
+[package]
+name = "oma_cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "oma"
+path = "src/main.rs"
+
+[dependencies]
+clap               = { workspace = true }
+tokio              = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow             = { workspace = true }
+
+oma_core     = { workspace = true }
+oma_provider = { workspace = true }
+oma_tui      = { workspace = true }

@@ -1,0 +1,26 @@
+target/
+Cargo.lock.bak
+
+# Editor artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+.env.local
+
+# Local user config (keep example)
+.oh-my-agent.toml
+!.oh-my-agent.toml.example
+
+# Local model storage — can be huge
+models/*.gguf
+models/*.safetensors
+
+# Build / debug artifacts
+*.log
+perf.data*
+flamegraph.svg
