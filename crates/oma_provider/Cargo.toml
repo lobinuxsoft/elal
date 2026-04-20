@@ -1,0 +1,19 @@
+[package]
+name = "oma_provider"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+default = ["vulkan"]
+vulkan  = ["llama-cpp-2/vulkan"]
+rocm    = ["llama-cpp-2/rocm"]
+dual    = ["vulkan", "rocm"]
+
+[dependencies]
+llama-cpp-2 = { workspace = true }
+thiserror   = { workspace = true }
+tracing     = { workspace = true }
