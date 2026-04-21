@@ -1,7 +1,3 @@
-// This module is consumed by `embedded/*` once chunk 4 wires it in; until
-// then clippy flags everything as dead code.
-#![allow(dead_code)]
-
 //! Adapter layer between our protocol types and llama-cpp-2's
 //! OpenAI-compatible layer.
 //!
@@ -17,7 +13,7 @@
 //!   `ToolCallInputDelta`, `ToolCallEnd` — in the right order and with
 //!   start/end bookends generated from state transitions.
 
-use oma_protocol::{Message, Role, StreamEvent, ToolDefinition};
+use oma_protocol::{StreamEvent, ToolDefinition};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -52,51 +48,6 @@ struct OaiFunctionDelta {
     name: Option<String>,
     #[serde(default)]
     arguments: Option<String>,
-}
-
-/// Serialize our `Message` slice to the OpenAI-compatible JSON array that
-/// `apply_chat_template_with_tools_oaicompat` consumes as `messages_json`.
-pub(crate) fn messages_to_json(messages: &[Message]) -> Result<String, LlmError> {
-    let arr: Vec<Value> = messages.iter().map(message_to_json).collect();
-    serde_json::to_string(&arr).map_err(|e| LlmError::Serialize(e.to_string()))
-}
-
-fn message_to_json(m: &Message) -> Value {
-    let role = match m.role {
-        Role::System => "system",
-        Role::User => "user",
-        Role::Assistant => "assistant",
-        Role::Tool => "tool",
-    };
-    let mut obj = json!({ "role": role });
-
-    if let Some(content) = &m.content {
-        obj["content"] = Value::String(content.clone());
-    }
-    if let Some(id) = &m.tool_call_id {
-        obj["tool_call_id"] = Value::String(id.clone());
-    }
-    if let Some(calls) = &m.tool_calls {
-        obj["tool_calls"] = Value::Array(
-            calls
-                .iter()
-                .map(|tc| {
-                    json!({
-                        "id": tc.id,
-                        "type": tc.kind,
-                        "function": {
-                            "name": tc.function.name,
-                            "arguments": tc.function.arguments,
-                        }
-                    })
-                })
-                .collect(),
-        );
-    }
-    if let Some(reasoning) = &m.reasoning_content {
-        obj["reasoning_content"] = Value::String(reasoning.clone());
-    }
-    obj
 }
 
 /// Serialize our `ToolDefinition` slice to the JSON array
@@ -227,29 +178,6 @@ impl DeltaClassifier {
 mod tests {
     use super::*;
     use oma_protocol::ToolDefinition;
-
-    #[test]
-    fn messages_serialize_to_expected_shape() {
-        let msgs = vec![Message::system("be helpful"), Message::user("read /tmp/x")];
-        let json = messages_to_json(&msgs).unwrap();
-        let parsed: Value = serde_json::from_str(&json).unwrap();
-        let arr = parsed.as_array().unwrap();
-        assert_eq!(arr.len(), 2);
-        assert_eq!(arr[0]["role"], "system");
-        assert_eq!(arr[0]["content"], "be helpful");
-        assert_eq!(arr[1]["role"], "user");
-        assert_eq!(arr[1]["content"], "read /tmp/x");
-    }
-
-    #[test]
-    fn tool_messages_carry_call_id() {
-        let msgs = vec![Message::tool("call_abc", "42")];
-        let json = messages_to_json(&msgs).unwrap();
-        let parsed: Value = serde_json::from_str(&json).unwrap();
-        assert_eq!(parsed[0]["role"], "tool");
-        assert_eq!(parsed[0]["tool_call_id"], "call_abc");
-        assert_eq!(parsed[0]["content"], "42");
-    }
 
     #[test]
     fn tools_serialize_to_expected_shape() {
