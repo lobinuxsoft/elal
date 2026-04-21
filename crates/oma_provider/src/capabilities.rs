@@ -71,7 +71,7 @@ impl Default for ModelCapabilities {
 }
 
 impl ModelCapabilities {
-    fn qwen25_coder() -> Self {
+    pub(crate) fn qwen25_coder() -> Self {
         Self {
             family: ModelFamily::Qwen25Coder,
             supports_tool_calls: ToolCallingTier::Native,
@@ -91,14 +91,14 @@ impl ModelCapabilities {
         }
     }
 
-    fn qwen25() -> Self {
+    pub(crate) fn qwen25() -> Self {
         Self {
             family: ModelFamily::Qwen25,
             ..Self::qwen25_coder()
         }
     }
 
-    fn qwen3() -> Self {
+    pub(crate) fn qwen3() -> Self {
         Self {
             family: ModelFamily::Qwen3,
             supports_reasoning: true,
@@ -111,7 +111,7 @@ impl ModelCapabilities {
         }
     }
 
-    fn mistral() -> Self {
+    pub(crate) fn mistral() -> Self {
         Self {
             family: ModelFamily::Mistral,
             supports_tool_calls: ToolCallingTier::Native,
@@ -124,7 +124,7 @@ impl ModelCapabilities {
         }
     }
 
-    fn deepseek_coder_v2() -> Self {
+    pub(crate) fn deepseek_coder_v2() -> Self {
         Self {
             family: ModelFamily::DeepSeekCoderV2,
             supports_tool_calls: ToolCallingTier::Native,
@@ -137,7 +137,7 @@ impl ModelCapabilities {
         }
     }
 
-    fn deepseek_r1_distill() -> Self {
+    pub(crate) fn deepseek_r1_distill() -> Self {
         Self {
             family: ModelFamily::DeepSeekR1,
             supports_tool_calls: ToolCallingTier::Prompted,
@@ -161,7 +161,7 @@ impl ModelCapabilities {
         }
     }
 
-    fn llama3() -> Self {
+    pub(crate) fn llama3() -> Self {
         Self {
             family: ModelFamily::Llama3,
             supports_tool_calls: ToolCallingTier::Native,
@@ -174,7 +174,7 @@ impl ModelCapabilities {
         }
     }
 
-    fn phi35() -> Self {
+    pub(crate) fn phi35() -> Self {
         Self {
             family: ModelFamily::Phi35,
             supports_tool_calls: ToolCallingTier::Prompted,
@@ -187,7 +187,7 @@ impl ModelCapabilities {
         }
     }
 
-    fn hermes3() -> Self {
+    pub(crate) fn hermes3() -> Self {
         Self {
             family: ModelFamily::Hermes3,
             supports_tool_calls: ToolCallingTier::Native,

@@ -8,6 +8,7 @@
 
 mod backend;
 mod capabilities;
+mod capabilities_resolver;
 mod compute;
 mod embedded;
 mod error;
@@ -18,6 +19,7 @@ pub use capabilities::{
     ChatTemplateOverride, ModelCapabilities, ModelFamily, SpecialTokens, ToolCallingTier,
     resolve_by_filename,
 };
+pub use capabilities_resolver::resolve_from_model;
 pub use compute::ComputeBackend;
 pub use embedded::{EmbeddedProvider, ModelLoadParams};
 pub use error::LlmError;
