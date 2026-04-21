@@ -10,10 +10,15 @@
 //! existing pieces — Provider, ToolRegistry, config, context — without a
 //! meaningful encapsulation boundary of its own.
 //!
-//! Chunk 3 (this) wires tool dispatch and the multi-round loop. Approval
-//! is bypassed — every tool executes, equivalent to `ApprovalMode::Never`.
-//! Chunk 4 inserts the approval handshake around the `execute` call.
+//! Chunk 4 wires the approval handshake: the dispatcher consults
+//! [`oma_tools::approval::resolve`], emits
+//! [`AgentEvent::ApprovalRequired`] when the user needs to decide, and
+//! waits for the matching [`UserAction::ApprovalResponse`] before
+//! executing. Session-scoped and tool-scoped approvals persist across
+//! turns on the [`Agent`]; turn-scoped approvals live in a local set
+//! created fresh at the start of every `run_turn`.
 
+use std::collections::HashSet;
 use std::path::PathBuf;
 
 use oma_protocol::{ApprovalMode, Message, Role, SessionId, StreamEvent};
@@ -38,13 +43,15 @@ pub struct Agent<'p, P: Provider> {
     tools: &'p ToolRegistry,
     history: Vec<Message>,
     system_prompt: String,
-    #[allow(dead_code)] // chunk 4 wires the approval resolver
     approval_mode: ApprovalMode,
     working_dir: PathBuf,
     sampling: SamplingControls,
     /// Per-turn session id — fresh per `run_turn`, passed into every
     /// `ToolContext` so tools can correlate their own telemetry.
     session_id: SessionId,
+    /// Tool names pre-approved at session scope. Persists across turns
+    /// for the lifetime of the agent; cleared by [`Agent::reset`].
+    approved_for_session: HashSet<String>,
 }
 
 impl<'p, P: Provider> Agent<'p, P> {
@@ -64,6 +71,7 @@ impl<'p, P: Provider> Agent<'p, P> {
             working_dir: working_dir.into(),
             sampling: SamplingControls::default(),
             session_id: SessionId::new(),
+            approved_for_session: HashSet::new(),
         }
     }
 
@@ -80,6 +88,7 @@ impl<'p, P: Provider> Agent<'p, P> {
     pub fn reset(&mut self) {
         self.history.clear();
         self.session_id = SessionId::new();
+        self.approved_for_session.clear();
     }
 
     /// Run a single turn against the provider.
@@ -91,7 +100,7 @@ impl<'p, P: Provider> Agent<'p, P> {
         &mut self,
         user_input: &str,
         events_tx: mpsc::Sender<AgentEvent>,
-        _actions_rx: &mut mpsc::Receiver<UserAction>,
+        actions_rx: &mut mpsc::Receiver<UserAction>,
     ) -> Result<TurnSummary, TurnError> {
         self.ensure_system_prompt();
         self.history.push(Message::user(user_input));
@@ -104,6 +113,7 @@ impl<'p, P: Provider> Agent<'p, P> {
             usage: oma_protocol::Usage::default(),
             cancelled: false,
         };
+        let mut approved_for_turn: HashSet<String> = HashSet::new();
 
         for round in 0..TURN_STEP_CAP {
             let budget = (self.provider.context_length() as f64 * 0.9) as usize;
@@ -129,19 +139,29 @@ impl<'p, P: Provider> Agent<'p, P> {
                 break;
             }
 
-            let dispatch = tool_exec::dispatch(
-                stream_summary.pending_tool_calls,
-                self.tools,
-                &self.working_dir,
-                self.session_id,
-            )
-            .await?;
+            let dispatch_ctx = tool_exec::DispatchContext {
+                tools: self.tools,
+                working_dir: &self.working_dir,
+                session_id: self.session_id,
+                mode: self.approval_mode,
+                approved_for_session: &mut self.approved_for_session,
+                approved_for_turn: &mut approved_for_turn,
+                events_tx: &events_tx,
+                actions_rx,
+            };
+            let dispatch =
+                tool_exec::dispatch(stream_summary.pending_tool_calls, dispatch_ctx).await?;
 
             for event in dispatch.events {
                 send(&events_tx, event).await?;
             }
             self.history.extend(dispatch.tool_messages);
             total.tool_calls_executed = total.tool_calls_executed.saturating_add(dispatch.executed);
+
+            if dispatch.cancelled {
+                total.cancelled = true;
+                break;
+            }
 
             // If the cap is one away, and we still need another round,
             // the next iteration will abort — fall through and let the
