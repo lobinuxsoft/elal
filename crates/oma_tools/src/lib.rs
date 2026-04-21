@@ -9,8 +9,11 @@
 //! not function pointers embedded in the spec. See issue #4 for the full
 //! rationale.
 
+mod apply_patch;
 pub mod approval;
 mod context;
+mod edit;
+mod file_write;
 mod glob;
 mod grep;
 mod list_dir;
@@ -21,8 +24,11 @@ mod shell_exec;
 mod spec;
 mod trait_def;
 
+pub use apply_patch::ApplyPatchTool;
 pub use approval::{ApprovalDecision, resolve};
 pub use context::{ToolContext, ToolEvent};
+pub use edit::EditTool;
+pub use file_write::FileWriteTool;
 pub use glob::GlobTool;
 pub use grep::GrepTool;
 pub use list_dir::ListDirTool;

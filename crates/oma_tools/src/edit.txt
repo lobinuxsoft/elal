@@ -1,0 +1,9 @@
+Replace one occurrence of a string in a file with a new string.
+
+Usage:
+- The path parameter is the file to edit. Relative paths are resolved against the current working directory. The file must exist.
+- The old_text parameter is the exact substring to replace. It must appear exactly once in the file; include enough surrounding context to be unambiguous.
+- The new_text parameter is the replacement substring.
+- The edit is atomic — if old_text is not found or is ambiguous, nothing is written.
+- Use the apply_patch tool when you need to stage multiple changes against the same file as a single transaction.
+- Use the write tool to create a new file or fully overwrite an existing one.

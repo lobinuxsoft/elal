@@ -1,0 +1,10 @@
+Create a new file or fully overwrite an existing one with the provided content.
+
+Usage:
+- The path parameter is the target file. Relative paths are resolved against the current working directory.
+- Parent directories are NOT created automatically; the parent must exist.
+- If the file exists, it is fully overwritten. The tool returns a unified diff against the previous content.
+- If the file does not exist, it is created and the tool reports that the file is new.
+- Prefer `apply_patch` or `edit` for surgical changes — this tool replaces the whole file.
+- Never use this tool to create new directories; it will fail if the parent directory does not exist.
+- The content parameter must be valid UTF-8.

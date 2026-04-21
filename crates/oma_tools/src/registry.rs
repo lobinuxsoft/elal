@@ -70,6 +70,9 @@ impl ToolRegistry {
         self.register(Arc::new(crate::shell_exec::ShellExecTool));
         self.register(Arc::new(crate::glob::GlobTool));
         self.register(Arc::new(crate::grep::GrepTool));
+        self.register(Arc::new(crate::file_write::FileWriteTool));
+        self.register(Arc::new(crate::apply_patch::ApplyPatchTool));
+        self.register(Arc::new(crate::edit::EditTool));
     }
 }
 
@@ -171,7 +174,16 @@ mod tests {
     fn register_defaults_registers_phase_2b_builtins() {
         let mut r = ToolRegistry::new();
         r.register_defaults();
-        for name in ["read", "list_dir", "shell_exec", "glob", "grep"] {
+        for name in [
+            "read",
+            "list_dir",
+            "shell_exec",
+            "glob",
+            "grep",
+            "write",
+            "apply_patch",
+            "edit",
+        ] {
             assert!(r.contains(name), "expected built-in '{name}' registered");
         }
     }

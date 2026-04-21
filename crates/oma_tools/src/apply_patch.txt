@@ -1,0 +1,11 @@
+Apply one or more textual edits to a single file, transactionally.
+
+Usage:
+- The path parameter is the file to edit. Relative paths are resolved against the current working directory. The file must exist.
+- The patch parameter is an array of hunks. Each hunk is an object `{"old_text": "...", "new_text": "..."}`.
+- Hunks are applied sequentially against the in-memory buffer. Each hunk's `old_text` must appear exactly once in the buffer at apply time; otherwise the patch is rejected.
+- If any hunk fails to match, NONE of the changes are written to disk. The edit is atomic.
+- On success the tool returns a unified diff of the applied changes.
+- `old_text` should include enough surrounding context to be unambiguous. Favor contextual anchors over trying to match lone punctuation.
+- Use the edit tool (convenience wrapper) when you only have one change.
+- Use the write tool to create new files or fully overwrite existing ones.
