@@ -19,6 +19,7 @@ tracing-subscriber = { workspace = true }
 anyhow             = { workspace = true }
 
 oma_core     = { workspace = true }
+oma_protocol = { workspace = true }
 oma_provider = { workspace = true }
 oma_tui      = { workspace = true }
 
