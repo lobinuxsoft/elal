@@ -1446,6 +1446,7 @@ dependencies = [
  "clap",
  "dirs",
  "oma_core",
+ "oma_protocol",
  "oma_provider",
  "oma_tui",
  "tokio",

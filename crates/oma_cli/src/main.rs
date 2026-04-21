@@ -1,7 +1,17 @@
 //! `oma` — oh-my-agent command-line entry point.
 
+use std::io::Write as _;
+use std::path::PathBuf;
+use std::time::Instant;
+
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use oma_provider::ComputeBackend;
+use oma_protocol::{Message, StreamEvent};
+use oma_provider::{
+    CompletionRequest, ComputeBackend, EmbeddedProvider, ModelLoadParams, Provider,
+    SamplingControls,
+};
+use tokio::sync::mpsc;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -24,10 +34,37 @@ enum Command {
     Tui,
     /// Report diagnostics about the runtime environment.
     Doctor,
+    /// Single-shot chat smoke test: load a GGUF and stream one response to stdout.
+    Chat(ChatArgs),
+}
+
+#[derive(clap::Args, Debug)]
+struct ChatArgs {
+    /// Path to a GGUF model file.
+    #[arg(long)]
+    model: PathBuf,
+    /// User message to send.
+    #[arg(long)]
+    prompt: String,
+    /// Optional system prompt.
+    #[arg(
+        long,
+        default_value = "You are a helpful assistant. Respond concisely."
+    )]
+    system: String,
+    /// Maximum number of tokens to generate.
+    #[arg(long, default_value_t = 512)]
+    max_tokens: u32,
+    /// GPU layers to offload. Negative means all layers.
+    #[arg(long, default_value_t = -1)]
+    n_gpu_layers: i32,
+    /// Sampling temperature.
+    #[arg(long, default_value_t = 0.7)]
+    temperature: f32,
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> Result<()> {
     let cli = Cli::parse();
 
     tracing_subscriber::fmt()
@@ -39,6 +76,7 @@ async fn main() -> anyhow::Result<()> {
             tracing::info!("TUI mode not implemented yet — see issue #7");
         }
         Command::Doctor => run_doctor(),
+        Command::Chat(args) => run_chat(args).await?,
     }
 
     Ok(())
@@ -56,4 +94,89 @@ fn run_doctor() {
             .map(|d| d.join("oh-my-agent").join("models").display().to_string())
             .unwrap_or_else(|| "<unknown>".into())
     );
+}
+
+async fn run_chat(args: ChatArgs) -> Result<()> {
+    anyhow::ensure!(
+        args.model.exists(),
+        "model file not found: {}",
+        args.model.display()
+    );
+
+    eprintln!(
+        "[oma chat] loading {} on {} backend…",
+        args.model.display(),
+        ComputeBackend::compiled()
+    );
+    let load_start = Instant::now();
+    let load_params = ModelLoadParams {
+        n_gpu_layers: args.n_gpu_layers,
+        ..Default::default()
+    };
+    let provider =
+        EmbeddedProvider::load(&args.model, &load_params).context("failed to load model")?;
+    eprintln!(
+        "[oma chat] model `{}` loaded in {} ms (context {} tokens)",
+        provider.model_name(),
+        load_start.elapsed().as_millis(),
+        provider.context_length(),
+    );
+
+    let sampling = SamplingControls {
+        temperature: args.temperature,
+        ..SamplingControls::default()
+    };
+
+    let request = CompletionRequest {
+        messages: vec![Message::system(args.system), Message::user(args.prompt)],
+        tools: vec![],
+        sampling,
+        max_tokens: Some(args.max_tokens),
+    };
+
+    let (tx, mut rx) = mpsc::channel::<StreamEvent>(128);
+
+    // Reader task — only touches the channel, so it's Send-safe.
+    // Re-acquires the stdout lock per write so the guard never crosses an await.
+    let reader = tokio::spawn(async move {
+        while let Some(event) = rx.recv().await {
+            match event {
+                StreamEvent::TextStart => {}
+                StreamEvent::TextDelta(s) => {
+                    let mut stdout = std::io::stdout().lock();
+                    let _ = stdout.write_all(s.as_bytes());
+                    let _ = stdout.flush();
+                }
+                StreamEvent::TextEnd => {
+                    println!();
+                }
+                _ => {}
+            }
+        }
+    });
+
+    let summary = provider
+        .chat_completion_stream(request, tx)
+        .await
+        .context("chat completion failed")?;
+
+    // Ensure the reader has drained the channel before we print stats.
+    reader.await?;
+
+    let toks_per_sec = if summary.usage.generation_ms > 0 {
+        (summary.usage.completion_tokens as f64 * 1000.0) / summary.usage.generation_ms as f64
+    } else {
+        0.0
+    };
+    eprintln!(
+        "[oma chat] stop={:?} prompt={} completion={} prompt_eval={} ms generation={} ms ({:.1} tok/s)",
+        summary.stop_reason,
+        summary.usage.prompt_tokens,
+        summary.usage.completion_tokens,
+        summary.usage.prompt_eval_ms,
+        summary.usage.generation_ms,
+        toks_per_sec,
+    );
+
+    Ok(())
 }
