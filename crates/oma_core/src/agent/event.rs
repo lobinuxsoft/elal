@@ -31,14 +31,11 @@ pub enum AgentEvent {
     /// hidden by default.
     ReasoningDelta(String),
 
-    /// A tool call started streaming. The `describe_action` string is the
-    /// tool's human-readable preview, ready for display in an approval
-    /// modal or a progress line.
-    ToolCallStart {
-        id: String,
-        name: String,
-        describe_action: String,
-    },
+    /// A tool call started streaming. The consumer typically renders this
+    /// as "calling `<name>` …"; the richer human-readable preview (with
+    /// the tool's `describe_action`) lives on [`ApprovalRequest`] because
+    /// that is the moment the user actually needs the context.
+    ToolCallStart { id: String, name: String },
 
     /// Incremental tool-call argument chunk (JSON fragment). Consumers
     /// generally don't need to render this unless they want a live view
