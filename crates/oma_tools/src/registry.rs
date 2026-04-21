@@ -60,11 +60,13 @@ impl ToolRegistry {
 
     /// Registers the default set of built-in tools.
     ///
-    /// Stubbed for Phase 2a — the concrete implementations live in issue #5.
-    /// Downstream crates (`oma_tasks`, etc.) register their own tools
-    /// explicitly against this registry.
+    /// Populated incrementally by Phase 2b (#5). Downstream crates
+    /// (`oma_tasks`, etc.) register their own tools explicitly against this
+    /// registry and are NOT included here to keep `oma_tools` free of
+    /// reverse dependencies.
     pub fn register_defaults(&mut self) {
-        // intentionally empty; see issue #5.
+        self.register(Arc::new(crate::read::ReadTool));
+        self.register(Arc::new(crate::list_dir::ListDirTool));
     }
 }
 
@@ -163,9 +165,28 @@ mod tests {
     }
 
     #[test]
-    fn register_defaults_is_stub() {
+    fn register_defaults_registers_phase_2b_builtins() {
         let mut r = ToolRegistry::new();
         r.register_defaults();
-        assert!(r.is_empty(), "Phase 2a defaults are empty; see #5");
+        assert!(r.contains("read"));
+        assert!(r.contains("list_dir"));
+    }
+
+    #[test]
+    fn register_defaults_tools_have_valid_schemas() {
+        let mut r = ToolRegistry::new();
+        r.register_defaults();
+        for def in r.definitions() {
+            assert!(
+                def.function.parameters.is_object(),
+                "tool '{}' produced non-object JSON schema",
+                def.function.name
+            );
+            assert!(
+                !def.function.description.is_empty(),
+                "tool '{}' has empty description",
+                def.function.name
+            );
+        }
     }
 }
