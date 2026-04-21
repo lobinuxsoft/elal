@@ -12,7 +12,7 @@ mod response;
 mod role;
 mod tool_schema;
 
-pub use approval::{ApprovalDecisionValue, ApprovalScopeValue};
+pub use approval::{ApprovalDecisionValue, ApprovalMode, ApprovalScopeValue};
 pub use event::StreamEvent;
 pub use identifiers::{MessageId, SessionId, ToolCallId};
 pub use message::{FunctionCall, Message, ToolCall};

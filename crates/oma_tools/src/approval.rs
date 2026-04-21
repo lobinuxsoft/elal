@@ -14,7 +14,7 @@
 //!
 //! [`#5`]: https://github.com/lobinuxsoft/oh-my-agent/issues/5
 
-use oma_core::ApprovalMode;
+use oma_protocol::ApprovalMode;
 
 use crate::spec::ApprovalHint;
 

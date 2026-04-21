@@ -9,13 +9,18 @@ repository.workspace = true
 
 [dependencies]
 oma_protocol = { workspace = true }
+oma_provider = { workspace = true }
+oma_tools    = { workspace = true }
 
-serde      = { workspace = true }
-serde_json = { workspace = true }
-toml       = { workspace = true }
-thiserror  = { workspace = true }
-dirs       = { workspace = true }
-tracing    = { workspace = true }
+async-trait = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+toml        = { workspace = true }
+thiserror   = { workspace = true }
+dirs        = { workspace = true }
+tokio       = { version = "1", default-features = false, features = ["sync", "time", "macros"] }
+tracing     = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+tokio    = { workspace = true }
