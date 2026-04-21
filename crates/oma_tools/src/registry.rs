@@ -75,6 +75,7 @@ impl ToolRegistry {
         self.register(Arc::new(crate::edit::EditTool));
         self.register(Arc::new(crate::webfetch::WebFetchTool));
         self.register(Arc::new(crate::websearch::WebSearchTool::new()));
+        self.register(Arc::new(crate::git::GitTool));
     }
 }
 
@@ -176,7 +177,7 @@ mod tests {
     fn register_defaults_registers_phase_2b_builtins() {
         let mut r = ToolRegistry::new();
         r.register_defaults();
-        for name in [
+        let expected = [
             "read",
             "list_dir",
             "shell_exec",
@@ -187,8 +188,48 @@ mod tests {
             "edit",
             "webfetch",
             "websearch",
-        ] {
+            "git",
+        ];
+        for name in expected {
             assert!(r.contains(name), "expected built-in '{name}' registered");
+        }
+        assert_eq!(r.len(), expected.len(), "exactly 11 built-ins expected");
+    }
+
+    #[test]
+    fn register_defaults_tool_names_match_spec_names() {
+        let mut r = ToolRegistry::new();
+        r.register_defaults();
+        for def in r.definitions() {
+            let tool = r
+                .get(&def.function.name)
+                .expect("tool retrievable by its declared name");
+            assert_eq!(
+                tool.name(),
+                def.function.name,
+                "Tool::name and ToolDefinition.function.name must agree"
+            );
+            assert_eq!(
+                tool.spec().name,
+                def.function.name,
+                "ToolSpec.name and ToolDefinition.function.name must agree"
+            );
+        }
+    }
+
+    #[test]
+    fn every_registered_tool_has_sensible_spec() {
+        let mut r = ToolRegistry::new();
+        r.register_defaults();
+        for def in r.definitions() {
+            let tool = r.get(&def.function.name).unwrap();
+            let spec = tool.spec();
+            if spec.approval_hint == crate::spec::ApprovalHint::Maybe {
+                assert_eq!(
+                    def.function.name, "git",
+                    "only 'git' is expected to use ApprovalHint::Maybe in Phase 2b"
+                );
+            }
         }
     }
 
