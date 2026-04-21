@@ -16,6 +16,9 @@ globwalk      = { workspace = true }
 grep-matcher  = { workspace = true }
 grep-regex    = { workspace = true }
 grep-searcher = { workspace = true }
+htmd          = { workspace = true }
+reqwest       = { workspace = true }
+scraper       = { workspace = true }
 serde         = { workspace = true }
 serde_json    = { workspace = true }
 similar       = { workspace = true }
@@ -25,5 +28,6 @@ tracing       = { workspace = true }
 walkdir       = { workspace = true }
 
 [dev-dependencies]
+httpmock = { workspace = true }
 tempfile = { workspace = true }
 tokio    = { workspace = true }

@@ -1,0 +1,10 @@
+Search the web using DuckDuckGo's HTML endpoint.
+
+Usage:
+- The query parameter is the search string.
+- The max_results parameter caps the number of results (default 5, max 20).
+- Each result is returned with its title, snippet, and absolute URL.
+- The query is sent to https://html.duckduckgo.com/html/ without any API key or account.
+- Results are scraped from the response HTML, so formatting quirks may appear — use the webfetch tool on a specific URL when you need clean content.
+- Network failures, rate limits, and parse errors surface as soft errors with the reason in the response.
+- Prefer this tool over shelling out to `curl` so approvals and rate handling are consistent.

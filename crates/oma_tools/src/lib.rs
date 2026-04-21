@@ -23,6 +23,8 @@ mod result;
 mod shell_exec;
 mod spec;
 mod trait_def;
+mod webfetch;
+mod websearch;
 
 pub use apply_patch::ApplyPatchTool;
 pub use approval::{ApprovalDecision, resolve};
@@ -38,3 +40,5 @@ pub use result::{ToolError, ToolResult};
 pub use shell_exec::ShellExecTool;
 pub use spec::{ApprovalHint, SideEffects, ToolSpec, ToolTier};
 pub use trait_def::Tool;
+pub use webfetch::WebFetchTool;
+pub use websearch::WebSearchTool;

@@ -73,6 +73,8 @@ impl ToolRegistry {
         self.register(Arc::new(crate::file_write::FileWriteTool));
         self.register(Arc::new(crate::apply_patch::ApplyPatchTool));
         self.register(Arc::new(crate::edit::EditTool));
+        self.register(Arc::new(crate::webfetch::WebFetchTool));
+        self.register(Arc::new(crate::websearch::WebSearchTool::new()));
     }
 }
 
@@ -183,6 +185,8 @@ mod tests {
             "write",
             "apply_patch",
             "edit",
+            "webfetch",
+            "websearch",
         ] {
             assert!(r.contains(name), "expected built-in '{name}' registered");
         }
