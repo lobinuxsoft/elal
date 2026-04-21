@@ -643,6 +643,16 @@ version = "0.1.0"
 [[package]]
 name = "oma_tools"
 version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "oma_core",
+ "oma_protocol",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
 
 [[package]]
 name = "oma_tui"

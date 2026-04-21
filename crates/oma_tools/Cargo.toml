@@ -8,3 +8,15 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+oma_core     = { workspace = true }
+oma_protocol = { workspace = true }
+
+async-trait = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+thiserror   = { workspace = true }
+tokio       = { version = "1", default-features = false, features = ["sync"] }
+tracing     = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
