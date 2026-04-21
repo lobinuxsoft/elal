@@ -26,6 +26,9 @@ pub enum LlmError {
     #[error("llama.cpp backend error: {0}")]
     Llama(String),
 
+    #[error("serialization error: {0}")]
+    Serialize(String),
+
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
 }

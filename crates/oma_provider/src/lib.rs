@@ -12,6 +12,7 @@ mod capabilities_resolver;
 mod compute;
 mod embedded;
 mod error;
+mod oaicompat;
 mod sampling;
 
 pub use backend::{CompletionRequest, CompletionSummary, Provider};
