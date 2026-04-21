@@ -1523,7 +1523,6 @@ dependencies = [
  "grep-searcher",
  "htmd",
  "httpmock",
- "oma_core",
  "oma_protocol",
  "reqwest",
  "scraper",

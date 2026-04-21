@@ -9,6 +9,24 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Global approval policy set by the user via config.
+///
+/// Distinct from [`ApprovalDecisionValue`] — `ApprovalMode` is the mode the
+/// agent runs in (never prompt / smart / always prompt); the decision value
+/// is what the user returns to an individual prompt.
+#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum ApprovalMode {
+    /// Ask for every tool invocation.
+    Always,
+    /// Auto-approve reads; ask for writes and process execution. This is the
+    /// sane default and what most users want.
+    #[default]
+    Smart,
+    /// Never ask (YOLO mode).
+    Never,
+}
+
 /// Client response to a pending approval request.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

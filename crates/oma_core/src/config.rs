@@ -1,20 +1,9 @@
 use std::path::{Path, PathBuf};
 
+use oma_protocol::ApprovalMode;
 use serde::{Deserialize, Serialize};
 
 use crate::error::{OmaError, Result};
-
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
-#[serde(rename_all = "snake_case")]
-pub enum ApprovalMode {
-    /// Ask for every tool invocation.
-    Always,
-    /// Auto-approve reads; ask for writes and process execution.
-    #[default]
-    Smart,
-    /// Never ask (YOLO mode).
-    Never,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct GlobalConfig {
