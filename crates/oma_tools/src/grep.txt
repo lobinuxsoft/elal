@@ -1,0 +1,12 @@
+Search file contents for a regular expression.
+
+Usage:
+- The pattern parameter is a regex (Rust regex syntax, roughly PCRE-compatible).
+- The path parameter is optional and defaults to the current working directory. Relative paths are resolved against the working directory.
+- The glob parameter is an optional filename filter applied on top of the regex (e.g. `**/*.rs`).
+- Matches are returned as `<file>:<line>:<content>`, sorted by file path then line number.
+- Results are capped at 500 matches; refine the pattern or narrow the path to see more.
+- Hidden files and directories (names starting with `.`) are excluded.
+- Binary files are skipped.
+- Use the read tool to read a matched file at a specific offset.
+- Use the glob tool when you want file paths by name pattern without searching contents.

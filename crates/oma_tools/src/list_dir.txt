@@ -1,0 +1,12 @@
+List the contents of a directory on the local filesystem.
+
+Usage:
+- The path parameter should be an absolute path. Relative paths are resolved against the current working directory.
+- Entries are returned one per line, sorted case-insensitively.
+- Subdirectories are suffixed with a trailing `/`.
+- Each entry is prefixed with a one-letter kind marker and its size in bytes: `d` for directory, `f` for file, `l` for symlink.
+- By default the listing is non-recursive. Set `recursive` to true to walk the tree.
+- When recursive, `max_depth` bounds how deep the walk goes (default 3).
+- Hidden entries (names starting with `.`) are included.
+- The number of entries returned is capped at 500 per call; use `glob` when you need to match by pattern across a wider tree.
+- Use this tool to explore directory structure before reading specific files.

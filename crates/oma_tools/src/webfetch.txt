@@ -1,0 +1,12 @@
+Fetch a web page and return its content converted to Markdown.
+
+Usage:
+- The url parameter is the fully-qualified URL (http or https).
+- The max_bytes parameter caps how many response bytes to read (default 2 MB).
+- The request times out after 30 seconds.
+- HTML responses are converted to Markdown and trimmed of scripts/styles.
+- Non-HTML responses (JSON, plain text, etc.) are returned as-is, truncated to max_bytes.
+- The HTTP status, content type, and final URL (after redirects) are included in the result header.
+- Redirects are followed up to a small limit; if the final status is not 2xx, the body is still returned.
+- Use this tool to read documentation pages, changelogs, or API specs referenced by URL.
+- Use the websearch tool when you have a query but not a URL.

@@ -1,0 +1,11 @@
+Execute a shell command and return its stdout, stderr, and exit code.
+
+Usage:
+- The command parameter is a full shell command string interpreted by `sh -c`.
+- The working_dir parameter is optional; when omitted, the command runs in the current working directory.
+- The timeout parameter is optional (default 120 seconds); the command is killed if it exceeds this.
+- Both stdout and stderr are captured independently. Each stream is capped at 50 KB; output beyond the cap is truncated with a marker.
+- The exit code is always reported. A non-zero exit code is returned as the tool's content, not as an error.
+- Prefer purpose-built tools (read, write, edit, glob, grep) over shelling out when one exists.
+- Never use this for git operations — use the dedicated `git` tool so approval can distinguish read vs write operations.
+- Long-running or interactive commands are not supported; anything that needs input will block until timeout.

@@ -60,11 +60,22 @@ impl ToolRegistry {
 
     /// Registers the default set of built-in tools.
     ///
-    /// Stubbed for Phase 2a — the concrete implementations live in issue #5.
-    /// Downstream crates (`oma_tasks`, etc.) register their own tools
-    /// explicitly against this registry.
+    /// Populated incrementally by Phase 2b (#5). Downstream crates
+    /// (`oma_tasks`, etc.) register their own tools explicitly against this
+    /// registry and are NOT included here to keep `oma_tools` free of
+    /// reverse dependencies.
     pub fn register_defaults(&mut self) {
-        // intentionally empty; see issue #5.
+        self.register(Arc::new(crate::read::ReadTool));
+        self.register(Arc::new(crate::list_dir::ListDirTool));
+        self.register(Arc::new(crate::shell_exec::ShellExecTool));
+        self.register(Arc::new(crate::glob::GlobTool));
+        self.register(Arc::new(crate::grep::GrepTool));
+        self.register(Arc::new(crate::file_write::FileWriteTool));
+        self.register(Arc::new(crate::apply_patch::ApplyPatchTool));
+        self.register(Arc::new(crate::edit::EditTool));
+        self.register(Arc::new(crate::webfetch::WebFetchTool));
+        self.register(Arc::new(crate::websearch::WebSearchTool::new()));
+        self.register(Arc::new(crate::git::GitTool));
     }
 }
 
@@ -163,9 +174,80 @@ mod tests {
     }
 
     #[test]
-    fn register_defaults_is_stub() {
+    fn register_defaults_registers_phase_2b_builtins() {
         let mut r = ToolRegistry::new();
         r.register_defaults();
-        assert!(r.is_empty(), "Phase 2a defaults are empty; see #5");
+        let expected = [
+            "read",
+            "list_dir",
+            "shell_exec",
+            "glob",
+            "grep",
+            "write",
+            "apply_patch",
+            "edit",
+            "webfetch",
+            "websearch",
+            "git",
+        ];
+        for name in expected {
+            assert!(r.contains(name), "expected built-in '{name}' registered");
+        }
+        assert_eq!(r.len(), expected.len(), "exactly 11 built-ins expected");
+    }
+
+    #[test]
+    fn register_defaults_tool_names_match_spec_names() {
+        let mut r = ToolRegistry::new();
+        r.register_defaults();
+        for def in r.definitions() {
+            let tool = r
+                .get(&def.function.name)
+                .expect("tool retrievable by its declared name");
+            assert_eq!(
+                tool.name(),
+                def.function.name,
+                "Tool::name and ToolDefinition.function.name must agree"
+            );
+            assert_eq!(
+                tool.spec().name,
+                def.function.name,
+                "ToolSpec.name and ToolDefinition.function.name must agree"
+            );
+        }
+    }
+
+    #[test]
+    fn every_registered_tool_has_sensible_spec() {
+        let mut r = ToolRegistry::new();
+        r.register_defaults();
+        for def in r.definitions() {
+            let tool = r.get(&def.function.name).unwrap();
+            let spec = tool.spec();
+            if spec.approval_hint == crate::spec::ApprovalHint::Maybe {
+                assert_eq!(
+                    def.function.name, "git",
+                    "only 'git' is expected to use ApprovalHint::Maybe in Phase 2b"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn register_defaults_tools_have_valid_schemas() {
+        let mut r = ToolRegistry::new();
+        r.register_defaults();
+        for def in r.definitions() {
+            assert!(
+                def.function.parameters.is_object(),
+                "tool '{}' produced non-object JSON schema",
+                def.function.name
+            );
+            assert!(
+                !def.function.description.is_empty(),
+                "tool '{}' has empty description",
+                def.function.name
+            );
+        }
     }
 }

@@ -9,16 +9,38 @@
 //! not function pointers embedded in the spec. See issue #4 for the full
 //! rationale.
 
+mod apply_patch;
 pub mod approval;
 mod context;
+mod edit;
+mod file_write;
+mod git;
+mod glob;
+mod grep;
+mod list_dir;
+mod read;
 mod registry;
 mod result;
+mod shell_exec;
 mod spec;
 mod trait_def;
+mod webfetch;
+mod websearch;
 
+pub use apply_patch::ApplyPatchTool;
 pub use approval::{ApprovalDecision, resolve};
 pub use context::{ToolContext, ToolEvent};
+pub use edit::EditTool;
+pub use file_write::FileWriteTool;
+pub use git::GitTool;
+pub use glob::GlobTool;
+pub use grep::GrepTool;
+pub use list_dir::ListDirTool;
+pub use read::ReadTool;
 pub use registry::ToolRegistry;
 pub use result::{ToolError, ToolResult};
+pub use shell_exec::ShellExecTool;
 pub use spec::{ApprovalHint, SideEffects, ToolSpec, ToolTier};
 pub use trait_def::Tool;
+pub use webfetch::WebFetchTool;
+pub use websearch::WebSearchTool;

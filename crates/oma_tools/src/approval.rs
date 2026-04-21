@@ -54,12 +54,14 @@ pub fn resolve(
 
 /// Per-tool matcher for [`ApprovalHint::Maybe`].
 ///
-/// Stub for Phase 2a: every unknown tool returns `Prompt`. Concrete matchers
-/// (e.g., "git_ops" inspecting the subcommand) land with the built-in tools
-/// in issue #5. This keeps the resolver's blast radius contained while the
-/// trait surface is still stabilizing.
-fn resolve_maybe(_tool_name: &str, _args: &serde_json::Value) -> ApprovalDecision {
-    ApprovalDecision::Prompt
+/// Unknown tools fail safe to `Prompt`. Known tools delegate to a per-tool
+/// classifier: for `git`, read operations (`status`, `diff`, `log`) are
+/// auto-allowed, write operations are prompted.
+fn resolve_maybe(tool_name: &str, args: &serde_json::Value) -> ApprovalDecision {
+    match tool_name {
+        "git" if crate::git::is_read_op(args) => ApprovalDecision::Allow,
+        _ => ApprovalDecision::Prompt,
+    }
 }
 
 #[cfg(test)]
@@ -137,6 +139,52 @@ mod tests {
             ),
             ApprovalDecision::Prompt,
             "unknown Maybe tool must fail safe to Prompt",
+        );
+    }
+
+    #[test]
+    fn smart_mode_maybe_allows_git_read_operations() {
+        for op in ["status", "diff", "log"] {
+            assert_eq!(
+                resolve(
+                    ApprovalMode::Smart,
+                    ApprovalHint::Maybe,
+                    "git",
+                    &serde_json::json!({ "operation": op }),
+                ),
+                ApprovalDecision::Allow,
+                "git {op} should auto-allow under Smart mode"
+            );
+        }
+    }
+
+    #[test]
+    fn smart_mode_maybe_prompts_git_write_operations() {
+        for op in ["add", "commit", "branch", "checkout"] {
+            assert_eq!(
+                resolve(
+                    ApprovalMode::Smart,
+                    ApprovalHint::Maybe,
+                    "git",
+                    &serde_json::json!({ "operation": op }),
+                ),
+                ApprovalDecision::Prompt,
+                "git {op} should prompt under Smart mode"
+            );
+        }
+    }
+
+    #[test]
+    fn always_mode_overrides_git_read_auto_allow() {
+        assert_eq!(
+            resolve(
+                ApprovalMode::Always,
+                ApprovalHint::Maybe,
+                "git",
+                &serde_json::json!({ "operation": "status" }),
+            ),
+            ApprovalDecision::Prompt,
+            "Always mode should force Prompt even for git read ops",
         );
     }
 

@@ -11,12 +11,23 @@ repository.workspace = true
 oma_core     = { workspace = true }
 oma_protocol = { workspace = true }
 
-async-trait = { workspace = true }
-serde       = { workspace = true }
-serde_json  = { workspace = true }
-thiserror   = { workspace = true }
-tokio       = { version = "1", default-features = false, features = ["sync"] }
-tracing     = { workspace = true }
+async-trait   = { workspace = true }
+globwalk      = { workspace = true }
+grep-matcher  = { workspace = true }
+grep-regex    = { workspace = true }
+grep-searcher = { workspace = true }
+htmd          = { workspace = true }
+reqwest       = { workspace = true }
+scraper       = { workspace = true }
+serde         = { workspace = true }
+serde_json    = { workspace = true }
+similar       = { workspace = true }
+thiserror     = { workspace = true }
+tokio         = { version = "1", default-features = false, features = ["sync", "process", "time", "macros", "rt"] }
+tracing       = { workspace = true }
+walkdir       = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true }
+httpmock = { workspace = true }
+tempfile = { workspace = true }
+tokio    = { workspace = true }

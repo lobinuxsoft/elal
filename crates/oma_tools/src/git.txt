@@ -1,0 +1,16 @@
+Run one git operation against the current repository.
+
+Usage:
+- The operation parameter picks the git subcommand: `status`, `diff`, `log`, `add`, `commit`, `branch`, `checkout`.
+- Read operations (`status`, `diff`, `log`) do not prompt the user. Write operations (`add`, `commit`, `branch`, `checkout`) always prompt.
+- The working_dir parameter is optional and defaults to the current working directory.
+- Per-operation args:
+  - `status`: no extra args.
+  - `diff`: optional `path` to narrow the diff; optional `cached` boolean to show staged changes.
+  - `log`: optional `limit` (default 10).
+  - `add`: required `path` to stage.
+  - `commit`: required `message`.
+  - `branch`: optional `name` to create; set `delete: true` to delete. No `name` lists branches.
+  - `checkout`: required `name` (branch or commit) to check out.
+- Output is the raw command stdout/stderr up to 50 KB per stream.
+- Prefer this tool over shell_exec for git commands so approval policy is applied per operation.
