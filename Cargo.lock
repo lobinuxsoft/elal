@@ -1462,12 +1462,16 @@ version = "0.1.0"
 name = "oma_core"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "dirs",
  "oma_protocol",
+ "oma_provider",
+ "oma_tools",
  "serde",
  "serde_json",
  "tempfile",
  "thiserror",
+ "tokio",
  "toml",
  "tracing",
 ]

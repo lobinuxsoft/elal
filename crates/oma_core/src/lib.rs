@@ -1,8 +1,9 @@
 //! `oma_core` — runtime state and coordination.
 //!
-//! Houses configuration loading, agent execution context, and the top-level
-//! error type. Wire-format types live in `oma_protocol`.
+//! Houses configuration loading, agent execution context, the agent loop,
+//! and the top-level error type. Wire-format types live in `oma_protocol`.
 
+pub mod agent;
 pub mod config;
 pub mod context;
 pub mod error;
