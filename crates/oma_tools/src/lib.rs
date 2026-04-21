@@ -11,18 +11,24 @@
 
 pub mod approval;
 mod context;
+mod glob;
+mod grep;
 mod list_dir;
 mod read;
 mod registry;
 mod result;
+mod shell_exec;
 mod spec;
 mod trait_def;
 
 pub use approval::{ApprovalDecision, resolve};
 pub use context::{ToolContext, ToolEvent};
+pub use glob::GlobTool;
+pub use grep::GrepTool;
 pub use list_dir::ListDirTool;
 pub use read::ReadTool;
 pub use registry::ToolRegistry;
 pub use result::{ToolError, ToolResult};
+pub use shell_exec::ShellExecTool;
 pub use spec::{ApprovalHint, SideEffects, ToolSpec, ToolTier};
 pub use trait_def::Tool;

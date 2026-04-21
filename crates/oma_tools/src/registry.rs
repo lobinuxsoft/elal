@@ -67,6 +67,9 @@ impl ToolRegistry {
     pub fn register_defaults(&mut self) {
         self.register(Arc::new(crate::read::ReadTool));
         self.register(Arc::new(crate::list_dir::ListDirTool));
+        self.register(Arc::new(crate::shell_exec::ShellExecTool));
+        self.register(Arc::new(crate::glob::GlobTool));
+        self.register(Arc::new(crate::grep::GrepTool));
     }
 }
 
@@ -168,8 +171,9 @@ mod tests {
     fn register_defaults_registers_phase_2b_builtins() {
         let mut r = ToolRegistry::new();
         r.register_defaults();
-        assert!(r.contains("read"));
-        assert!(r.contains("list_dir"));
+        for name in ["read", "list_dir", "shell_exec", "glob", "grep"] {
+            assert!(r.contains(name), "expected built-in '{name}' registered");
+        }
     }
 
     #[test]

@@ -1,0 +1,11 @@
+Find files matching a glob pattern relative to a directory.
+
+Usage:
+- The pattern parameter is a glob pattern (e.g. `**/*.rs`, `src/**/main.*`, `tests/fixtures/**`).
+- The path parameter is optional and defaults to the current working directory. Relative paths are resolved against the working directory.
+- Results are sorted by modification time (newest first).
+- The result list is capped at 200 entries; refine the pattern when the cap is hit.
+- Hidden files (names starting with `.`) are excluded.
+- Use this tool when the model knows a pattern but not the exact filenames.
+- Use the read tool to inspect the content of the matched files.
+- Use the grep tool to search inside file contents.
