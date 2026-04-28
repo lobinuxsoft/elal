@@ -76,6 +76,8 @@ impl ToolRegistry {
         self.register(Arc::new(crate::webfetch::WebFetchTool));
         self.register(Arc::new(crate::websearch::WebSearchTool::new()));
         self.register(Arc::new(crate::git::GitTool));
+        self.register(Arc::new(crate::todo_write::TodoWriteTool));
+        self.register(Arc::new(crate::update_plan::UpdatePlanTool));
     }
 }
 
@@ -189,11 +191,17 @@ mod tests {
             "webfetch",
             "websearch",
             "git",
+            "todo_write",
+            "update_plan",
         ];
         for name in expected {
             assert!(r.contains(name), "expected built-in '{name}' registered");
         }
-        assert_eq!(r.len(), expected.len(), "exactly 11 built-ins expected");
+        assert_eq!(
+            r.len(),
+            expected.len(),
+            "13 built-ins expected after #13 port"
+        );
     }
 
     #[test]

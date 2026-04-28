@@ -23,7 +23,9 @@ mod registry;
 mod result;
 mod shell_exec;
 mod spec;
+mod todo_write;
 mod trait_def;
+mod update_plan;
 mod webfetch;
 mod websearch;
 
@@ -41,6 +43,8 @@ pub use registry::ToolRegistry;
 pub use result::{ToolError, ToolResult};
 pub use shell_exec::ShellExecTool;
 pub use spec::{ApprovalHint, SideEffects, ToolSpec, ToolTier};
+pub use todo_write::{TodoItem, TodoStatus, TodoWriteTool};
 pub use trait_def::Tool;
+pub use update_plan::{PlanItem, PlanStatus, UpdatePlanTool};
 pub use webfetch::WebFetchTool;
 pub use websearch::WebSearchTool;
