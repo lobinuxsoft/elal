@@ -82,6 +82,7 @@ pub struct SessionConfig {
 /// One-to-one mirror of `claw-code-rust/core/session.rs::SessionState` with
 /// oh-my-agent's typing. The rollout journal (chunk 2) hydrates this from
 /// disk on `--resume`, and writes append back as the agent loop runs.
+#[derive(Debug)]
 pub struct SessionState {
     /// Stable session identifier.
     pub id: SessionId,

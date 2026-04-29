@@ -16,6 +16,11 @@ pub enum OmaError {
 
     #[error("toml serialize error: {0}")]
     TomlSerialize(#[from] toml::ser::Error),
+
+    /// Structural failures from session replay/persistence — empty rollout,
+    /// missing meta header, schema-version mismatch, etc.
+    #[error("session: {0}")]
+    Session(String),
     // Sub-crate error variants will be added here as crates are implemented:
     // Llm(#[from] oma_provider::LlmError)  — #3
     // Tool(#[from] oma_tools::ToolError)   — #4
