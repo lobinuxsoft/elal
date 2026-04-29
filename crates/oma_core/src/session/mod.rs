@@ -16,4 +16,4 @@ mod state;
 pub use query::{ListedSession, find_latest, list_sessions, locate};
 pub use replay::{LoadedSession, load_session};
 pub use rollout::RolloutStore;
-pub use state::{SessionConfig, SessionState, TokenBudget};
+pub use state::{SessionConfig, SessionState, TokenBudget, compact_messages};

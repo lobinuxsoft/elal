@@ -178,41 +178,55 @@ impl SessionState {
     /// present, or when every droppable message would have to be
     /// removed to leave at least one non-system entry.
     pub fn compact(&mut self) -> usize {
-        if self.messages.len() <= 2 {
-            return 0;
-        }
-        let target = self.compute_remove_count();
-        if target == 0 {
-            return 0;
-        }
-        self.drop_oldest_non_system(target)
+        compact_messages(
+            &mut self.messages,
+            self.last_input_tokens,
+            &self.config.token_budget,
+        )
     }
+}
 
-    fn compute_remove_count(&self) -> usize {
-        let msg_count = self.messages.len();
-        if self.last_input_tokens == 0 {
-            return msg_count / 2;
-        }
-        let avg = self.last_input_tokens / msg_count;
-        if avg == 0 {
-            return msg_count / 2;
-        }
-        let target = (self.config.token_budget.input_budget() as f64 * 0.7) as usize;
-        let keep = (target / avg).max(2).min(msg_count);
-        msg_count - keep
+/// Pure-function variant of [`SessionState::compact`] — operates on any
+/// `Vec<Message>` so the agent loop can reuse the same policy without
+/// constructing a `SessionState`.
+pub fn compact_messages(
+    messages: &mut Vec<Message>,
+    last_input_tokens: usize,
+    budget: &TokenBudget,
+) -> usize {
+    if messages.len() <= 2 {
+        return 0;
     }
+    let target = compute_remove_count(messages.len(), last_input_tokens, budget);
+    if target == 0 {
+        return 0;
+    }
+    drop_oldest_non_system(messages, target)
+}
 
-    fn drop_oldest_non_system(&mut self, target: usize) -> usize {
-        let mut removed = 0;
-        self.messages.retain(|msg| {
-            let should_drop = removed < target && msg.role != Role::System;
-            if should_drop {
-                removed += 1;
-            }
-            !should_drop
-        });
-        removed
+fn compute_remove_count(msg_count: usize, last_input_tokens: usize, budget: &TokenBudget) -> usize {
+    if last_input_tokens == 0 {
+        return msg_count / 2;
     }
+    let avg = last_input_tokens / msg_count;
+    if avg == 0 {
+        return msg_count / 2;
+    }
+    let target = (budget.input_budget() as f64 * 0.7) as usize;
+    let keep = (target / avg).max(2).min(msg_count);
+    msg_count - keep
+}
+
+fn drop_oldest_non_system(messages: &mut Vec<Message>, target: usize) -> usize {
+    let mut removed = 0;
+    messages.retain(|msg| {
+        let should_drop = removed < target && msg.role != Role::System;
+        if should_drop {
+            removed += 1;
+        }
+        !should_drop
+    });
+    removed
 }
 
 #[cfg(test)]
