@@ -7,6 +7,7 @@ pub mod agent;
 pub mod config;
 pub mod context;
 pub mod error;
+pub mod session;
 
 pub use config::{
     AgentOverrides, ContextConfig, GlobalConfig, ProjectConfig, ToolsConfig, load_effective,
@@ -17,3 +18,4 @@ pub use config::{
 pub use context::{AgentContext, GitInfo, OsInfo};
 pub use error::{OmaError, Result};
 pub use oma_protocol::ApprovalMode;
+pub use session::{SessionConfig, SessionState, TokenBudget};
