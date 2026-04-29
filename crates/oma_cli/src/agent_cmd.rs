@@ -24,7 +24,10 @@ use oma_core::{
     load_session, locate,
 };
 use oma_protocol::ApprovalMode;
-use oma_provider::{ComputeBackend, EmbeddedProvider, ModelLoadParams, Provider};
+use oma_provider::{
+    ComputeBackend, EmbeddedProvider, ModelLoadParams, Provider, compute_model_sha256, kv_path,
+    validate_compatible,
+};
 use oma_tools::ToolRegistry;
 use tokio::io::{AsyncBufReadExt, BufReader, stdin};
 use tokio::sync::mpsc;
@@ -62,6 +65,13 @@ pub struct AgentArgs {
     /// Force a fresh session, ignoring any prior history for the cwd.
     #[arg(long, conflicts_with_all = ["resume", "continue_"])]
     pub new: bool,
+
+    /// Persist the KV cache next to the rollout (`<rollout>.kv`). On
+    /// `--resume` against the same model file the cache is loaded so the
+    /// next turn skips prompt-eval over the prior context. Opt-in because
+    /// snapshots can grow to ~1 GiB at full 32K context.
+    #[arg(long = "save-kv-cache")]
+    pub save_kv_cache: bool,
 }
 
 #[derive(Debug)]
@@ -117,25 +127,71 @@ pub async fn run(args: AgentArgs) -> Result<()> {
     let mut agent = Agent::new(&provider, &tools, &args.system, approval_mode, &cwd);
 
     if let Some(loaded) = loaded {
+        let kv_decision = decide_resume_kv_path(args.save_kv_cache, &loaded, provider.model_path());
         eprintln!(
             "[oma agent] resumed session {} ({} message(s) in history)",
             loaded.record.id,
             loaded.state.messages.len()
         );
         agent = agent.resume_session(store, loaded);
+        if let Some(path) = kv_decision {
+            eprintln!("[oma agent] kv-cache enabled at {}", path.display());
+            agent = agent.with_kv_cache_path(path);
+        }
     } else {
-        let record = store.create_session_record(
+        let mut record = store.create_session_record(
             SessionId::new(),
             Utc::now(),
             cwd.clone(),
             Some(provider.model_path().to_path_buf()),
             approval_mode,
         );
+        let kv_path_opt = if args.save_kv_cache {
+            let sha = compute_model_sha256(provider.model_path())
+                .context("computing model SHA-256 for kv-cache failed")?;
+            record.model_sha256 = Some(sha);
+            Some(kv_path(&record.rollout_path))
+        } else {
+            None
+        };
         eprintln!("[oma agent] new session {}", record.id);
         agent = agent.with_persistence(store, record);
+        if let Some(path) = kv_path_opt {
+            eprintln!("[oma agent] kv-cache enabled at {}", path.display());
+            agent = agent.with_kv_cache_path(path);
+        }
     }
 
     repl(&mut agent).await
+}
+
+/// Decide whether to enable KV-cache snapshots when resuming a session.
+/// Returns `Some(kv_path)` when the snapshot is safe to use, `None` when
+/// the user opted out, the recorded model SHA is missing, or the SHA no
+/// longer matches the live model.
+fn decide_resume_kv_path(
+    flag_on: bool,
+    loaded: &LoadedSession,
+    current_model: &std::path::Path,
+) -> Option<PathBuf> {
+    if !flag_on {
+        return None;
+    }
+    let Some(expected_sha) = loaded.record.model_sha256.as_deref() else {
+        eprintln!(
+            "[oma agent] --save-kv-cache: prior session has no recorded model SHA — skipping kv load (snapshots will populate going forward)"
+        );
+        return Some(kv_path(&loaded.record.rollout_path));
+    };
+    match validate_compatible(expected_sha, current_model) {
+        Ok(()) => Some(kv_path(&loaded.record.rollout_path)),
+        Err(err) => {
+            eprintln!(
+                "[oma agent] --save-kv-cache: refusing to load snapshot — {err} — falling back to full prompt-eval"
+            );
+            None
+        }
+    }
 }
 
 fn parse_resume_mode(args: &AgentArgs) -> Result<ResumeMode> {
@@ -262,98 +318,5 @@ fn render_event(event: AgentEvent) {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use oma_core::SessionState;
-    use oma_protocol::{ApprovalMode, SessionRecord};
-
-    fn args_default() -> AgentArgs {
-        AgentArgs {
-            model: None,
-            system: "sys".into(),
-            n_gpu_layers: -1,
-            resume: None,
-            continue_: false,
-            new: false,
-        }
-    }
-
-    #[test]
-    fn parse_resume_mode_defaults_to_new() {
-        let mode = parse_resume_mode(&args_default()).unwrap();
-        assert!(matches!(mode, ResumeMode::New));
-    }
-
-    #[test]
-    fn parse_resume_mode_recognises_continue() {
-        let mut args = args_default();
-        args.continue_ = true;
-        let mode = parse_resume_mode(&args).unwrap();
-        assert!(matches!(mode, ResumeMode::Continue));
-    }
-
-    #[test]
-    fn parse_resume_mode_parses_resume_uuid() {
-        let id = SessionId::new();
-        let mut args = args_default();
-        args.resume = Some(id.to_string());
-        let mode = parse_resume_mode(&args).unwrap();
-        match mode {
-            ResumeMode::Resume(parsed) => assert_eq!(parsed, id),
-            _ => panic!("expected Resume variant"),
-        }
-    }
-
-    #[test]
-    fn parse_resume_mode_rejects_invalid_uuid() {
-        let mut args = args_default();
-        args.resume = Some("not-a-uuid".into());
-        let err = parse_resume_mode(&args).unwrap_err();
-        assert!(format!("{err}").contains("--resume expects a session UUID"));
-    }
-
-    #[test]
-    fn resolve_model_path_prefers_explicit() {
-        let explicit = PathBuf::from("/models/explicit.gguf");
-        let resolved = resolve_model_path(Some(&explicit), None).unwrap();
-        assert_eq!(resolved, explicit);
-    }
-
-    #[test]
-    fn resolve_model_path_errors_when_no_inputs() {
-        let err = resolve_model_path(None, None).unwrap_err();
-        assert!(format!("{err}").contains("required for new sessions"));
-    }
-
-    #[test]
-    fn resolve_model_path_errors_when_recorded_path_missing() {
-        let bogus = PathBuf::from("/nonexistent/model.gguf");
-        let record = SessionRecord {
-            id: SessionId::new(),
-            rollout_path: PathBuf::from("/tmp/rollout.jsonl"),
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
-            source: "cli".into(),
-            model_path: Some(bogus.clone()),
-            model_sha256: None,
-            cwd: PathBuf::from("/cwd"),
-            oma_version: "0.0.0".into(),
-            title: None,
-            approval_mode: ApprovalMode::Never,
-            total_input_tokens: 0,
-            total_output_tokens: 0,
-            first_user_message: None,
-            schema_version: oma_protocol::SCHEMA_VERSION,
-        };
-        let loaded = LoadedSession {
-            record,
-            state: SessionState::new(Default::default(), PathBuf::from("/cwd")),
-            last_turn_seq: 0,
-            last_item_seq: 0,
-        };
-        let err = resolve_model_path(None, Some(&loaded)).unwrap_err();
-        let msg = format!("{err}");
-        assert!(msg.contains("model path no longer exists"));
-        assert!(msg.contains(&bogus.display().to_string()));
-    }
-}
+#[path = "agent_cmd_tests.rs"]
+mod tests;

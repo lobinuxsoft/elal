@@ -67,6 +67,11 @@ pub struct Agent<'p, P: Provider> {
     /// Input tokens reported by the most recent turn. Drives the compaction
     /// trigger via [`TokenBudget::should_compact`].
     last_input_tokens: usize,
+    /// Optional KV-cache snapshot path threaded into every
+    /// [`CompletionRequest`]. `Some(path)` opts the session into the
+    /// `state_save_file` / `state_load_file` round-trip; `None` falls back
+    /// to full prompt evaluation each turn.
+    kv_cache_path: Option<PathBuf>,
 }
 
 impl<'p, P: Provider> Agent<'p, P> {
@@ -90,6 +95,7 @@ impl<'p, P: Provider> Agent<'p, P> {
             persistence: None,
             token_budget: TokenBudget::default(),
             last_input_tokens: 0,
+            kv_cache_path: None,
         }
     }
 
@@ -105,6 +111,15 @@ impl<'p, P: Provider> Agent<'p, P> {
     #[must_use]
     pub fn with_token_budget(mut self, budget: TokenBudget) -> Self {
         self.token_budget = budget;
+        self
+    }
+
+    /// Opt the session into KV-cache snapshots — every turn loads the file
+    /// at `path` (when present) and atomically rewrites it after generation.
+    /// Threaded into every [`CompletionRequest`] this agent emits.
+    #[must_use]
+    pub fn with_kv_cache_path(mut self, path: PathBuf) -> Self {
+        self.kv_cache_path = Some(path);
         self
     }
 
@@ -211,6 +226,7 @@ impl<'p, P: Provider> Agent<'p, P> {
                 tools: self.tools.definitions(),
                 sampling: self.sampling.clone(),
                 max_tokens: None,
+                kv_cache_path: self.kv_cache_path.clone(),
             };
 
             let stream_summary = self.pump_round(request, &events_tx).await?;

@@ -12,6 +12,7 @@ mod capabilities_resolver;
 mod compute;
 mod embedded;
 mod error;
+pub mod kv_snapshot;
 mod oaicompat;
 mod sampling;
 
@@ -24,6 +25,7 @@ pub use capabilities_resolver::resolve_from_model;
 pub use compute::ComputeBackend;
 pub use embedded::{EmbeddedProvider, ModelLoadParams};
 pub use error::LlmError;
+pub use kv_snapshot::{KvSnapshotError, compute_model_sha256, kv_path, validate_compatible};
 pub use sampling::SamplingControls;
 
 /// Which backend this build activated (compile-time via feature flags).

@@ -152,6 +152,7 @@ async fn run_chat(args: ChatArgs) -> Result<()> {
         tools: vec![],
         sampling,
         max_tokens: Some(args.max_tokens),
+        kv_cache_path: None,
     };
 
     let (tx, mut rx) = mpsc::channel::<StreamEvent>(128);

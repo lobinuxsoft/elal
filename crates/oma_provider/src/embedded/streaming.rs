@@ -21,11 +21,13 @@ use llama_cpp_2::model::AddBos;
 #[allow(deprecated)]
 use llama_cpp_2::model::Special;
 use llama_cpp_2::openai::ChatParseStateOaicompat;
+use llama_cpp_2::token::LlamaToken;
 use oma_protocol::{StopReason, StreamEvent, Usage};
 use tokio::sync::mpsc::Sender;
 
 use crate::backend::{CompletionRequest, CompletionSummary};
 use crate::error::LlmError;
+use crate::kv_snapshot;
 use crate::oaicompat::DeltaClassifier;
 
 use super::prompt::{ToolPromptSetup, build_oaicompat_prompt, build_plain_prompt};
@@ -45,8 +47,34 @@ pub(super) async fn run(
 
     let mut ctx = provider
         .model
-        .new_context(&provider.backend, ctx_params)
+        .new_context(&provider.backend, ctx_params.clone())
         .map_err(|e| LlmError::Context(e.to_string()))?;
+
+    // Try to load a prior KV snapshot if the caller opted in. Failures are
+    // logged and swallowed — the snapshot is an optimisation, never the
+    // contract; we always have the full prompt to fall back on.
+    let mut loaded_tokens: Vec<LlamaToken> = Vec::new();
+    if let Some(kv_path) = request.kv_cache_path.as_ref()
+        && kv_path.exists()
+    {
+        match kv_snapshot::load(&mut ctx, kv_path, provider.context_length) {
+            Ok(loaded) => {
+                tracing::debug!(
+                    kv_path = %kv_path.display(),
+                    loaded_count = loaded.len(),
+                    "kv cache loaded"
+                );
+                loaded_tokens = loaded;
+            }
+            Err(err) => {
+                tracing::warn!(
+                    kv_path = %kv_path.display(),
+                    error = %err,
+                    "kv cache load failed; falling back to full prompt eval"
+                );
+            }
+        }
+    }
 
     // Build prompt + sink — plain path on empty tools, oaicompat otherwise.
     let use_tools = !request.tools.is_empty();
@@ -90,12 +118,35 @@ pub(super) async fn run(
         )));
     }
 
+    // Compute the prefix the loaded snapshot already covers, falling back
+    // to a fresh context when the prefix doesn't match the live prompt.
+    let prefix_len = if !loaded_tokens.is_empty() && tokens.starts_with(&loaded_tokens) {
+        // Always re-decode the last token so logits are fresh for the
+        // sampler — saves us reasoning about whether `state_load_file`
+        // restored the logits buffer in addition to the KV cache.
+        loaded_tokens.len().min(tokens.len().saturating_sub(1))
+    } else {
+        if !loaded_tokens.is_empty() {
+            tracing::warn!(
+                loaded = loaded_tokens.len(),
+                live = tokens.len(),
+                "kv prefix mismatch — recreating context for full prompt eval"
+            );
+            ctx = provider
+                .model
+                .new_context(&provider.backend, ctx_params.clone())
+                .map_err(|e| LlmError::Context(e.to_string()))?;
+        }
+        0
+    };
+
     let mut batch = LlamaBatch::new(provider.context_length, 1);
-    let last_idx = tokens.len() - 1;
-    for (i, token) in tokens.iter().enumerate() {
-        let is_last = i == last_idx;
+    let to_feed = &tokens[prefix_len..];
+    let last_idx = to_feed.len() - 1;
+    for (i, token) in to_feed.iter().enumerate() {
+        let pos = (prefix_len + i) as i32;
         batch
-            .add(*token, i as i32, &[0], is_last)
+            .add(*token, pos, &[0], i == last_idx)
             .map_err(|e| LlmError::Decode(e.to_string()))?;
     }
 
@@ -103,6 +154,14 @@ pub(super) async fn run(
         .map_err(|e| LlmError::Decode(e.to_string()))?;
 
     let prompt_eval_ms = prompt_eval_start.elapsed().as_millis() as u64;
+    if prefix_len > 0 {
+        tracing::info!(
+            kv_prefix = prefix_len,
+            decoded = to_feed.len(),
+            prompt_eval_ms,
+            "kv-cache hit — skipped prompt-eval over prefix"
+        );
+    }
 
     // Only emit a top-level TextStart for the plain path — tool runs emit
     // their own bookends per-section via the classifier.
@@ -113,6 +172,7 @@ pub(super) async fn run(
     let generation_start = Instant::now();
     let mut n_generated: u32 = 0;
     let mut cur_pos = tokens.len() as i32;
+    let mut generated_tokens: Vec<LlamaToken> = Vec::new();
     let stop_reason;
 
     loop {
@@ -139,6 +199,8 @@ pub(super) async fn run(
             send(events, event).await?;
         }
 
+        generated_tokens.push(next);
+
         batch.clear();
         batch
             .add(next, cur_pos, &[0], true)
@@ -148,6 +210,26 @@ pub(super) async fn run(
 
         n_generated += 1;
         cur_pos += 1;
+    }
+
+    // Save the KV state alongside the rollout if the caller opted in.
+    // Failures are non-fatal — the next turn falls back to a full eval and
+    // logs the problem.
+    if let Some(kv_path) = request.kv_cache_path.as_ref() {
+        let mut full = tokens.clone();
+        full.extend(&generated_tokens);
+        match kv_snapshot::save(&ctx, &full, kv_path) {
+            Ok(()) => tracing::debug!(
+                kv_path = %kv_path.display(),
+                tokens = full.len(),
+                "kv cache saved"
+            ),
+            Err(err) => tracing::warn!(
+                kv_path = %kv_path.display(),
+                error = %err,
+                "kv cache save failed"
+            ),
+        }
     }
 
     // Drain any events the sink was still holding onto.
