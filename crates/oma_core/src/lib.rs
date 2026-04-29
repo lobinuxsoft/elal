@@ -19,5 +19,6 @@ pub use context::{AgentContext, GitInfo, OsInfo};
 pub use error::{OmaError, Result};
 pub use oma_protocol::ApprovalMode;
 pub use session::{
-    LoadedSession, RolloutStore, SessionConfig, SessionState, TokenBudget, load_session,
+    ListedSession, LoadedSession, RolloutStore, SessionConfig, SessionState, TokenBudget,
+    find_latest, list_sessions, load_session, locate,
 };

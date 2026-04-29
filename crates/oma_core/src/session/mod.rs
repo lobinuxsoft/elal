@@ -8,10 +8,12 @@
 //! - `kv_snapshot` (chunk 7): llama.cpp `state_save_file` / `state_load_file`
 //!   adapter.
 
+mod query;
 mod replay;
 mod rollout;
 mod state;
 
+pub use query::{ListedSession, find_latest, list_sessions, locate};
 pub use replay::{LoadedSession, load_session};
 pub use rollout::RolloutStore;
 pub use state::{SessionConfig, SessionState, TokenBudget};
