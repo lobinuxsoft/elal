@@ -66,7 +66,6 @@ impl Persistence {
 
     /// Resumed session — caller supplies the highest-seen sequence counters
     /// so subsequent appends do not collide with the prior journal.
-    #[allow(dead_code, reason = "wired by chunk 6 (--resume CLI)")]
     pub(super) fn for_resumed_session(
         store: RolloutStore,
         record: SessionRecord,

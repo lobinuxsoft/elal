@@ -43,6 +43,12 @@ pub struct LoadedSession {
     /// `total_*_tokens` populated from the rollout. `config` is the default;
     /// the caller overrides it once the model is loaded.
     pub state: SessionState,
+    /// Highest `sequence` seen in any `Turn` line — used by resumed sessions
+    /// so the next `Persistence::begin_turn` allocates a fresh, monotonic id.
+    pub last_turn_seq: u32,
+    /// Highest `seq` seen in any `Item` line — used by resumed sessions to
+    /// continue assigning monotonic seq values.
+    pub last_item_seq: u64,
 }
 
 /// Replays the rollout at `rollout_path` into a [`LoadedSession`].
@@ -53,6 +59,8 @@ pub fn load_session(rollout_path: &Path) -> Result<LoadedSession> {
 
     let mut record = read_session_meta(&mut iter)?;
     let mut state = SessionState::with_id(record.id, SessionConfig::default(), record.cwd.clone());
+    let mut last_turn_seq: u32 = 0;
+    let mut last_item_seq: u64 = 0;
 
     // Buffer the next raw line so we can detect "is this the last line"
     // before parsing — needed to tolerate truncated tail writes.
@@ -60,7 +68,13 @@ pub fn load_session(rollout_path: &Path) -> Result<LoadedSession> {
     while let Some(raw) = pending.take() {
         let lookahead = next_non_empty(&mut iter)?;
         match serde_json::from_str::<RolloutLine>(&raw) {
-            Ok(parsed) => apply_line(&mut record, &mut state, parsed),
+            Ok(parsed) => apply_line(
+                &mut record,
+                &mut state,
+                &mut last_turn_seq,
+                &mut last_item_seq,
+                parsed,
+            ),
             Err(err) => {
                 if lookahead.is_none() {
                     // Truncated tail — silently drop and finish.
@@ -72,7 +86,12 @@ pub fn load_session(rollout_path: &Path) -> Result<LoadedSession> {
         pending = lookahead;
     }
 
-    Ok(LoadedSession { record, state })
+    Ok(LoadedSession {
+        record,
+        state,
+        last_turn_seq,
+        last_item_seq,
+    })
 }
 
 /// Reads the next non-empty line from `iter`, returning `Ok(None)` at EOF.
@@ -108,12 +127,19 @@ fn rollout_line_kind(line: &RolloutLine) -> &'static str {
     }
 }
 
-fn apply_line(record: &mut SessionRecord, state: &mut SessionState, line: RolloutLine) {
+fn apply_line(
+    record: &mut SessionRecord,
+    state: &mut SessionState,
+    last_turn_seq: &mut u32,
+    last_item_seq: &mut u64,
+    line: RolloutLine,
+) {
     match line {
         // Duplicate meta after the first — accept silently for tooling robustness.
         RolloutLine::SessionMeta(_) => {}
         RolloutLine::Turn(turn_line) => {
             let turn = turn_line.turn;
+            *last_turn_seq = (*last_turn_seq).max(turn.sequence);
             state.turn_count = state.turn_count.max(turn.sequence as usize);
             if let Some(usage) = turn.usage {
                 state.total_input_tokens =
@@ -125,6 +151,7 @@ fn apply_line(record: &mut SessionRecord, state: &mut SessionState, line: Rollou
             }
         }
         RolloutLine::Item(item_line) => {
+            *last_item_seq = (*last_item_seq).max(item_line.item.seq);
             for item in item_line.item.items {
                 state.push_message(item_to_message(item));
             }

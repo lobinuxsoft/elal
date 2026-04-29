@@ -387,3 +387,37 @@ fn duplicate_session_meta_is_ignored() {
     assert_eq!(loaded.record.id, record.id);
     assert_eq!(loaded.state.turn_count, 1);
 }
+
+#[test]
+fn last_seq_counters_reflect_highest_emitted_values() {
+    let (_dir, store) = make_store();
+    let record = make_record(&store, PathBuf::from("/cwd"));
+    store.append_session_meta(&record).unwrap();
+    store
+        .append_turn(&record, make_turn(&record, 1, 10, 5))
+        .unwrap();
+    let item_record = make_item(
+        &record,
+        TurnId::new(),
+        7,
+        vec![TurnItem::UserMessage(TextItem { text: "hi".into() })],
+    );
+    store.append_item(&record, item_record).unwrap();
+    store
+        .append_turn(&record, make_turn(&record, 2, 20, 10))
+        .unwrap();
+
+    let loaded = load_session(&record.rollout_path).unwrap();
+    assert_eq!(loaded.last_turn_seq, 2);
+    assert_eq!(loaded.last_item_seq, 7);
+}
+
+#[test]
+fn empty_rollout_after_meta_yields_zero_seq_counters() {
+    let (_dir, store) = make_store();
+    let record = make_record(&store, PathBuf::from("/cwd"));
+    store.append_session_meta(&record).unwrap();
+    let loaded = load_session(&record.rollout_path).unwrap();
+    assert_eq!(loaded.last_turn_seq, 0);
+    assert_eq!(loaded.last_item_seq, 0);
+}

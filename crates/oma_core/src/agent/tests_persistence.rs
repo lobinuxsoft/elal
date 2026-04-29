@@ -17,7 +17,7 @@ use super::test_helpers::{
     CompactionProvider, EchoTool, ScriptedProvider, done, drain, fixed_ts, make_store, read_lines,
 };
 use super::{Agent, AgentEvent, UserAction};
-use crate::session::TokenBudget;
+use crate::session::{TokenBudget, load_session};
 
 #[tokio::test]
 async fn plain_turn_writes_meta_running_user_agent_completed() {
@@ -219,6 +219,103 @@ async fn compaction_marker_lands_before_user_message_on_next_turn() {
     assert!(
         compaction_pos.is_some() && user_pos.is_some() && compaction_pos < user_pos,
         "compaction marker must appear before the user message inside turn 2"
+    );
+}
+
+#[tokio::test]
+async fn resume_session_rehydrates_history_and_continues_seq() {
+    let dir = tempdir().unwrap();
+    let store = make_store(dir.path());
+    let record = store.create_session_record(
+        SessionId::new(),
+        fixed_ts(),
+        PathBuf::from("/cwd"),
+        None,
+        ApprovalMode::Never,
+    );
+    let rollout_path = record.rollout_path.clone();
+
+    // Turn 1: write rollout via a fresh agent.
+    let provider = ScriptedProvider::new_last_first(vec![vec![
+        StreamEvent::TextDelta("hello back".into()),
+        done(StopReason::EndTurn),
+    ]]);
+    let tools = ToolRegistry::new();
+    let mut agent = Agent::new(&provider, &tools, "sys", ApprovalMode::Never, "/cwd")
+        .with_persistence(store.clone(), record);
+    let (ev_tx, mut ev_rx) = mpsc::channel::<AgentEvent>(64);
+    let (_act_tx, mut act_rx) = mpsc::channel::<UserAction>(16);
+    agent
+        .run_turn("first prompt", ev_tx, &mut act_rx)
+        .await
+        .unwrap();
+    drain(&mut ev_rx).await;
+    let history_after_turn1 = agent.history().to_vec();
+    drop(agent);
+
+    // Resume via load_session + Agent::resume_session.
+    let loaded = load_session(&rollout_path).expect("replay must succeed");
+    assert!(loaded.last_turn_seq >= 1);
+    assert!(loaded.last_item_seq >= 2); // user + agent items at minimum
+    let replayed_history_len = loaded.state.messages.len();
+
+    let provider2 = ScriptedProvider::new_last_first(vec![vec![
+        StreamEvent::TextDelta("second response".into()),
+        done(StopReason::EndTurn),
+    ]]);
+    let tools2 = ToolRegistry::new();
+    let mut resumed = Agent::new(&provider2, &tools2, "sys", ApprovalMode::Never, "/cwd")
+        .resume_session(store.clone(), loaded);
+
+    // System prompt is intentionally NOT persisted — the agent re-injects
+    // it on the next `run_turn`. So the resumed history matches the
+    // replayed (non-system) message count, which is `history_after_turn1`
+    // minus the leading system message.
+    assert_eq!(resumed.history().len(), replayed_history_len);
+    assert_eq!(replayed_history_len, history_after_turn1.len() - 1);
+
+    let (ev_tx, mut ev_rx) = mpsc::channel::<AgentEvent>(64);
+    let (_act_tx, mut act_rx) = mpsc::channel::<UserAction>(16);
+    resumed
+        .run_turn("second prompt", ev_tx, &mut act_rx)
+        .await
+        .unwrap();
+    drain(&mut ev_rx).await;
+
+    // Rollout must now have exactly one SessionMeta line, two Turn(Running)
+    // lines (one per turn), and seq numbers strictly increase.
+    let lines = read_lines(&rollout_path);
+    let meta_count = lines
+        .iter()
+        .filter(|l| matches!(l, RolloutLine::SessionMeta(_)))
+        .count();
+    assert_eq!(meta_count, 1, "resume must NOT rewrite the meta line");
+    let running_count = lines
+        .iter()
+        .filter(|l| matches!(l, RolloutLine::Turn(t) if t.turn.status == TurnStatus::Running))
+        .count();
+    assert_eq!(running_count, 2, "two Turn(Running) entries — one per turn");
+
+    let item_seqs: Vec<u64> = lines
+        .iter()
+        .filter_map(|l| match l {
+            RolloutLine::Item(item) => Some(item.item.seq),
+            _ => None,
+        })
+        .collect();
+    let mut sorted = item_seqs.clone();
+    sorted.sort_unstable();
+    assert_eq!(
+        item_seqs, sorted,
+        "item seq must be monotonic across resume"
+    );
+    assert_eq!(
+        item_seqs
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len(),
+        item_seqs.len(),
+        "item seq must not repeat after resume"
     );
 }
 

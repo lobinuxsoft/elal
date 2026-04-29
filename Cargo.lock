@@ -1511,15 +1511,19 @@ name = "oma_cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "clap",
  "dirs",
  "oma_core",
  "oma_protocol",
  "oma_provider",
+ "oma_tools",
  "oma_tui",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "uuid",
 ]
 
 [[package]]

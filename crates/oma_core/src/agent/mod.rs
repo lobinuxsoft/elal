@@ -121,6 +121,28 @@ impl<'p, P: Provider> Agent<'p, P> {
         self
     }
 
+    /// Resume a persisted session — rehydrates `history`, `last_input_tokens`,
+    /// `session_id`, and wires the rollout store with continuity over the
+    /// existing turn / item sequence counters so subsequent appends do not
+    /// collide with the prior journal.
+    #[must_use]
+    pub fn resume_session(
+        mut self,
+        store: RolloutStore,
+        loaded: crate::session::LoadedSession,
+    ) -> Self {
+        self.session_id = loaded.record.id;
+        self.history = loaded.state.messages;
+        self.last_input_tokens = loaded.state.last_input_tokens;
+        self.persistence = Some(Persistence::for_resumed_session(
+            store,
+            loaded.record,
+            loaded.last_turn_seq,
+            loaded.last_item_seq,
+        ));
+        self
+    }
+
     pub fn history(&self) -> &[Message] {
         &self.history
     }

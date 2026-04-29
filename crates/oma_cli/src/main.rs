@@ -13,6 +13,10 @@ use oma_provider::{
 };
 use tokio::sync::mpsc;
 
+mod agent_cmd;
+mod data_root;
+mod sessions_cmd;
+
 #[derive(Parser, Debug)]
 #[command(
     name = "oma",
@@ -36,6 +40,19 @@ enum Command {
     Doctor,
     /// Single-shot chat smoke test: load a GGUF and stream one response to stdout.
     Chat(ChatArgs),
+    /// Run the interactive agent loop with persistent sessions.
+    Agent(agent_cmd::AgentArgs),
+    /// Inspect persisted sessions on disk.
+    #[command(subcommand)]
+    Sessions(SessionsCommand),
+}
+
+#[derive(Subcommand, Debug)]
+enum SessionsCommand {
+    /// List all persisted sessions, newest first.
+    List(sessions_cmd::SessionsListArgs),
+    /// Print the reconstructed transcript for a session.
+    Show(sessions_cmd::SessionsShowArgs),
 }
 
 #[derive(clap::Args, Debug)]
@@ -77,6 +94,9 @@ async fn main() -> Result<()> {
         }
         Command::Doctor => run_doctor(),
         Command::Chat(args) => run_chat(args).await?,
+        Command::Agent(args) => agent_cmd::run(args).await?,
+        Command::Sessions(SessionsCommand::List(args)) => sessions_cmd::run_list(args)?,
+        Command::Sessions(SessionsCommand::Show(args)) => sessions_cmd::run_show(args)?,
     }
 
     Ok(())

@@ -21,6 +21,10 @@ anyhow             = { workspace = true }
 oma_core     = { workspace = true }
 oma_protocol = { workspace = true }
 oma_provider = { workspace = true }
+oma_tools    = { workspace = true }
 oma_tui      = { workspace = true }
 
-dirs = { workspace = true }
+chrono     = { workspace = true }
+dirs       = { workspace = true }
+serde_json = { workspace = true }
+uuid       = { workspace = true }
