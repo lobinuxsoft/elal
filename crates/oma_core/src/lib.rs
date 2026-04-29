@@ -18,4 +18,4 @@ pub use config::{
 pub use context::{AgentContext, GitInfo, OsInfo};
 pub use error::{OmaError, Result};
 pub use oma_protocol::ApprovalMode;
-pub use session::{SessionConfig, SessionState, TokenBudget};
+pub use session::{RolloutStore, SessionConfig, SessionState, TokenBudget};

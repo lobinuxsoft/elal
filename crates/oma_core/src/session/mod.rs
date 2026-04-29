@@ -8,6 +8,8 @@
 //! - `kv_snapshot` (chunk 7): llama.cpp `state_save_file` / `state_load_file`
 //!   adapter.
 
+mod rollout;
 mod state;
 
+pub use rollout::RolloutStore;
 pub use state::{SessionConfig, SessionState, TokenBudget};

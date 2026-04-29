@@ -13,6 +13,7 @@ oma_provider = { workspace = true }
 oma_tools    = { workspace = true }
 
 async-trait = { workspace = true }
+chrono      = { workspace = true }
 serde       = { workspace = true }
 serde_json  = { workspace = true }
 toml        = { workspace = true }

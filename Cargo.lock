@@ -1531,6 +1531,7 @@ name = "oma_core"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "chrono",
  "dirs",
  "oma_protocol",
  "oma_provider",
