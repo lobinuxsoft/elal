@@ -23,12 +23,16 @@ use oma_core::{
     Agent, AgentEvent, LoadedSession, RolloutStore, SessionId, UserAction, find_latest,
     load_session, locate,
 };
+use oma_models::{ModelCatalog, ModelEntry, ModelManager};
 use oma_protocol::ApprovalMode;
 use oma_provider::{
-    ComputeBackend, EmbeddedProvider, ModelLoadParams, Provider, compute_model_sha256, kv_path,
-    validate_compatible,
+    ComputeBackend, ModelLoadParams, Provider, compute_model_sha256, kv_path, validate_compatible,
 };
 use oma_tools::ToolRegistry;
+
+/// Synthetic id for the ad-hoc catalog entry the manager wraps when
+/// the user passed `--model <path>` instead of `--model-id <id>`.
+const AD_HOC_MODEL_ID: &str = "from-path";
 use tokio::io::{AsyncBufReadExt, BufReader, stdin};
 use tokio::sync::mpsc;
 
@@ -39,8 +43,15 @@ pub struct AgentArgs {
     /// Path to a GGUF model file. Required for `--new` and `--continue`
     /// without prior history; optional when `--resume`/`--continue` finds
     /// a session whose recorded `model_path` is still available.
-    #[arg(long)]
+    /// Mutually exclusive with `--model-id`.
+    #[arg(long, conflicts_with = "model_id")]
     pub model: Option<PathBuf>,
+
+    /// Catalog id for the model (e.g. `qwen3-coder-30b-a3b-q3_k_s`).
+    /// Resolved against the builtin `oma_models::ModelCatalog`.
+    /// Mutually exclusive with `--model`.
+    #[arg(long = "model-id", conflicts_with = "model")]
+    pub model_id: Option<String>,
 
     /// System prompt to inject as the first message of new sessions.
     #[arg(
@@ -107,21 +118,26 @@ pub async fn run(args: AgentArgs) -> Result<()> {
         ResumeMode::New => None,
     };
 
-    let model_path = resolve_model_path(args.model.as_ref(), loaded.as_ref())?;
+    let (catalog, model_id) = build_catalog_and_id(&args, loaded.as_ref())?;
 
-    eprintln!(
-        "[oma agent] loading {} on {} backend…",
-        model_path.display(),
-        ComputeBackend::compiled()
-    );
-    let load_start = Instant::now();
     let load_params = ModelLoadParams {
         n_gpu_layers: args.n_gpu_layers,
         n_ctx: args.n_ctx,
         ..Default::default()
     };
-    let provider =
-        EmbeddedProvider::load(&model_path, &load_params).context("failed to load model")?;
+
+    let mut manager = ModelManager::new(catalog);
+    eprintln!(
+        "[oma agent] loading model `{model_id}` on {} backend…",
+        ComputeBackend::compiled()
+    );
+    let load_start = Instant::now();
+    manager
+        .use_model(&model_id, &load_params)
+        .context("model manager: load failed")?;
+    let provider = manager
+        .current_provider()
+        .expect("use_model just succeeded");
     eprintln!(
         "[oma agent] model `{}` loaded in {} ms (context {} tokens — {})",
         provider.model_name(),
@@ -132,7 +148,7 @@ pub async fn run(args: AgentArgs) -> Result<()> {
 
     let tools = ToolRegistry::new();
     let approval_mode = ApprovalMode::Never;
-    let mut agent = Agent::new(&provider, &tools, &args.system, approval_mode, &cwd);
+    let mut agent = Agent::new(provider, &tools, &args.system, approval_mode, &cwd);
 
     if let Some(loaded) = loaded {
         let kv_decision = decide_resume_kv_path(args.save_kv_cache, &loaded, provider.model_path());
@@ -228,11 +244,50 @@ fn resolve_model_path(
             return Ok(p.clone());
         }
         bail!(
-            "session's recorded model path no longer exists: {} — pass --model to override",
+            "session's recorded model path no longer exists: {} — pass --model or --model-id to override",
             p.display()
         );
     }
-    bail!("--model <path> is required for new sessions")
+    bail!("--model <path> or --model-id <id> is required for new sessions")
+}
+
+/// Build the [`ModelCatalog`] + the id [`ModelManager`] should request.
+/// Two paths:
+/// - `--model-id <id>` → builtin catalog, id straight through.
+/// - `--model <path>` (or recovered from a resumed session) → wrap the
+///   path in an ad-hoc catalog with a single [`AD_HOC_MODEL_ID`] entry.
+///   Keeps the manager codepath single-source-of-truth across both
+///   surfaces.
+fn build_catalog_and_id(
+    args: &AgentArgs,
+    loaded: Option<&LoadedSession>,
+) -> Result<(ModelCatalog, String)> {
+    if let Some(id) = args.model_id.as_deref() {
+        let catalog = ModelCatalog::builtin();
+        if catalog.by_id(id).is_none() {
+            bail!(
+                "--model-id `{id}` not found in builtin catalog (known ids: {:?})",
+                catalog.ids()
+            );
+        }
+        return Ok((catalog, id.to_string()));
+    }
+
+    let path = resolve_model_path(args.model.as_ref(), loaded)?;
+    let display = path
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .unwrap_or("ad-hoc")
+        .to_string();
+    let size_bytes = std::fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
+    let catalog = ModelCatalog::empty().with_entry(ModelEntry::new(
+        AD_HOC_MODEL_ID,
+        display,
+        path,
+        size_bytes,
+        "Ad-hoc entry derived from --model <path> or a resumed session",
+    ));
+    Ok((catalog, AD_HOC_MODEL_ID.to_string()))
 }
 
 async fn repl<P: Provider>(agent: &mut Agent<'_, P>) -> Result<()> {

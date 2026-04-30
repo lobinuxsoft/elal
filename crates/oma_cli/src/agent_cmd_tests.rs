@@ -9,6 +9,7 @@ use oma_protocol::{ApprovalMode, SessionRecord};
 fn args_default() -> AgentArgs {
     AgentArgs {
         model: None,
+        model_id: None,
         system: "sys".into(),
         n_gpu_layers: -1,
         n_ctx: 0,
@@ -140,4 +141,50 @@ fn decide_resume_kv_path_accepts_matching_sha() {
     let loaded = make_loaded(Some(model_path.clone()), Some(sha));
     let decision = decide_resume_kv_path(true, &loaded, &model_path);
     assert!(decision.is_some());
+}
+
+#[test]
+fn build_catalog_and_id_uses_builtin_for_known_model_id() {
+    let mut args = args_default();
+    args.model_id = Some("qwen3-1.7b-q5".into());
+    let (catalog, id) = build_catalog_and_id(&args, None).expect("known id");
+    assert_eq!(id, "qwen3-1.7b-q5");
+    assert!(catalog.by_id("qwen3-1.7b-q5").is_some());
+    // builtin carries multiple ids, not just the requested one.
+    assert!(catalog.len() >= 2);
+}
+
+#[test]
+fn build_catalog_and_id_rejects_unknown_model_id_with_diagnostic() {
+    let mut args = args_default();
+    args.model_id = Some("does-not-exist".into());
+    let err = build_catalog_and_id(&args, None).expect_err("unknown id rejects");
+    let msg = format!("{err}");
+    assert!(msg.contains("not found in builtin catalog"), "{msg}");
+    assert!(msg.contains("known ids:"), "{msg}");
+}
+
+#[test]
+fn build_catalog_and_id_wraps_explicit_path_in_ad_hoc_catalog() {
+    let dir = tempfile::tempdir().unwrap();
+    let model_path = dir.path().join("explicit.gguf");
+    std::fs::write(&model_path, b"deterministic-bytes").unwrap();
+    let mut args = args_default();
+    args.model = Some(model_path.clone());
+    let (catalog, id) = build_catalog_and_id(&args, None).expect("explicit path");
+    assert_eq!(id, AD_HOC_MODEL_ID);
+    assert_eq!(catalog.len(), 1);
+    let entry = catalog.by_id(AD_HOC_MODEL_ID).expect("ad-hoc entry");
+    assert_eq!(entry.path, model_path);
+    assert!(
+        catalog.by_id("qwen3-1.7b-q5").is_none(),
+        "ad-hoc catalog must NOT shadow with builtin entries"
+    );
+}
+
+#[test]
+fn build_catalog_and_id_errors_when_neither_path_nor_id_provided() {
+    let args = args_default();
+    let err = build_catalog_and_id(&args, None).expect_err("no source must error");
+    assert!(format!("{err}").contains("required for new sessions"));
 }
