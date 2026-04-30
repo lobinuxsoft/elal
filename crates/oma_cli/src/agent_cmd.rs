@@ -53,6 +53,12 @@ pub struct AgentArgs {
     #[arg(long, default_value_t = -1)]
     pub n_gpu_layers: i32,
 
+    /// Context window size in tokens. `0` (default) auto-tunes from
+    /// available VRAM under the 80%-of-total budget. Positive values
+    /// override the auto-tuner up to the model's `n_ctx_train`.
+    #[arg(long, default_value_t = 0)]
+    pub n_ctx: u32,
+
     /// Resume a specific session by id.
     #[arg(long, value_name = "ID", conflicts_with_all = ["continue_", "new"])]
     pub resume: Option<String>,
@@ -111,15 +117,17 @@ pub async fn run(args: AgentArgs) -> Result<()> {
     let load_start = Instant::now();
     let load_params = ModelLoadParams {
         n_gpu_layers: args.n_gpu_layers,
+        n_ctx: args.n_ctx,
         ..Default::default()
     };
     let provider =
         EmbeddedProvider::load(&model_path, &load_params).context("failed to load model")?;
     eprintln!(
-        "[oma agent] model `{}` loaded in {} ms (context {} tokens)",
+        "[oma agent] model `{}` loaded in {} ms (context {} tokens — {})",
         provider.model_name(),
         load_start.elapsed().as_millis(),
         provider.context_length(),
+        provider.auto_tune().reason,
     );
 
     let tools = ToolRegistry::new();

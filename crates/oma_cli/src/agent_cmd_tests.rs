@@ -11,6 +11,7 @@ fn args_default() -> AgentArgs {
         model: None,
         system: "sys".into(),
         n_gpu_layers: -1,
+        n_ctx: 0,
         resume: None,
         continue_: false,
         new: false,
