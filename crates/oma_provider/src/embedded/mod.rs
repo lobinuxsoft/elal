@@ -15,11 +15,13 @@ use llama_cpp_2::model::params::LlamaModelParams;
 use oma_protocol::StreamEvent;
 use tokio::sync::mpsc::Sender;
 
+use crate::auto_tune::{AutoTuneResult, auto_tune_n_ctx};
 use crate::backend::{CompletionRequest, CompletionSummary, Provider};
 use crate::capabilities::{ModelCapabilities, resolve_by_filename};
 use crate::capabilities_resolver;
 use crate::compute::ComputeBackend;
 use crate::error::LlmError;
+use crate::hardware::detect_primary_gpu_vram;
 
 mod prompt;
 mod sampler;
@@ -62,6 +64,7 @@ pub struct EmbeddedProvider {
     pub(super) context_length: usize,
     pub(super) n_batch: u32,
     pub(super) chat_template: Option<LlamaChatTemplate>,
+    pub(super) auto_tune: AutoTuneResult,
 }
 
 impl EmbeddedProvider {
@@ -79,12 +82,12 @@ impl EmbeddedProvider {
         let model = LlamaModel::load_from_file(&backend, model_path, &model_params)
             .map_err(|e| LlmError::Load(format!("{}: {e}", model_path.display())))?;
 
-        let native_ctx = model.n_ctx_train();
-        let context_length = if params.n_ctx == 0 {
-            native_ctx as usize
-        } else {
-            params.n_ctx.min(native_ctx) as usize
-        };
+        // VRAM is queried *after* the model loads so the "free" figure
+        // already excludes the model weights — the remainder is what
+        // the KV cache actually has to fit in.
+        let vram = detect_primary_gpu_vram();
+        let auto_tune = auto_tune_n_ctx(&model, params.n_ctx, vram);
+        let context_length = auto_tune.n_ctx as usize;
 
         // Start with either an explicit override or the filename heuristic,
         // then upgrade with whatever GGUF metadata has to say about the
@@ -114,6 +117,7 @@ impl EmbeddedProvider {
             context_length,
             n_batch: params.n_batch,
             chat_template,
+            auto_tune,
         })
     }
 
@@ -123,6 +127,11 @@ impl EmbeddedProvider {
 
     pub fn model_path(&self) -> &Path {
         &self.model_path
+    }
+
+    /// Diagnostic — explains how `context_length` was decided.
+    pub fn auto_tune(&self) -> &AutoTuneResult {
+        &self.auto_tune
     }
 }
 
