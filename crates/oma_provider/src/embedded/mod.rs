@@ -15,11 +15,13 @@ use llama_cpp_2::model::params::LlamaModelParams;
 use oma_protocol::StreamEvent;
 use tokio::sync::mpsc::Sender;
 
+use crate::auto_tune::{AutoTuneResult, auto_tune_n_ctx};
 use crate::backend::{CompletionRequest, CompletionSummary, Provider};
 use crate::capabilities::{ModelCapabilities, resolve_by_filename};
 use crate::capabilities_resolver;
 use crate::compute::ComputeBackend;
 use crate::error::LlmError;
+use crate::hardware::detect_primary_gpu_vram;
 
 mod prompt;
 mod sampler;
@@ -42,7 +44,11 @@ impl Default for ModelLoadParams {
         Self {
             n_gpu_layers: -1,
             n_ctx: 0,
-            n_batch: 512,
+            // 4096 fits agent prompts that include the full tool catalog
+            // (11 tool JSON schemas + system + first user message). The
+            // upstream llama.cpp default of 512 fails GGML_ASSERT(n_tokens
+            // <= n_batch) on the very first decode in agent mode.
+            n_batch: 4096,
             capabilities: None,
         }
     }
@@ -58,6 +64,7 @@ pub struct EmbeddedProvider {
     pub(super) context_length: usize,
     pub(super) n_batch: u32,
     pub(super) chat_template: Option<LlamaChatTemplate>,
+    pub(super) auto_tune: AutoTuneResult,
 }
 
 impl EmbeddedProvider {
@@ -75,12 +82,14 @@ impl EmbeddedProvider {
         let model = LlamaModel::load_from_file(&backend, model_path, &model_params)
             .map_err(|e| LlmError::Load(format!("{}: {e}", model_path.display())))?;
 
-        let native_ctx = model.n_ctx_train();
-        let context_length = if params.n_ctx == 0 {
-            native_ctx as usize
-        } else {
-            params.n_ctx.min(native_ctx) as usize
-        };
+        // VRAM probe runs against the GPU's TOTAL — not free — bytes,
+        // because the budget rule is anchored on capacity (model + KV
+        // ≤ 80% of total), not on what other processes happen to be
+        // holding at probe time. The auto-tuner refuses to load a
+        // model whose file size already breaks that envelope.
+        let vram = detect_primary_gpu_vram();
+        let auto_tune = auto_tune_n_ctx(&model, params.n_ctx, vram, model_path)?;
+        let context_length = auto_tune.n_ctx as usize;
 
         // Start with either an explicit override or the filename heuristic,
         // then upgrade with whatever GGUF metadata has to say about the
@@ -110,6 +119,7 @@ impl EmbeddedProvider {
             context_length,
             n_batch: params.n_batch,
             chat_template,
+            auto_tune,
         })
     }
 
@@ -119,6 +129,11 @@ impl EmbeddedProvider {
 
     pub fn model_path(&self) -> &Path {
         &self.model_path
+    }
+
+    /// Diagnostic — explains how `context_length` was decided.
+    pub fn auto_tune(&self) -> &AutoTuneResult {
+        &self.auto_tune
     }
 }
 

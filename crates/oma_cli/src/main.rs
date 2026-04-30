@@ -9,7 +9,7 @@ use clap::{Parser, Subcommand};
 use oma_protocol::{Message, StreamEvent};
 use oma_provider::{
     CompletionRequest, ComputeBackend, EmbeddedProvider, ModelLoadParams, Provider,
-    SamplingControls,
+    SamplingControls, detect_primary_gpu_vram,
 };
 use tokio::sync::mpsc;
 
@@ -75,6 +75,10 @@ struct ChatArgs {
     /// GPU layers to offload. Negative means all layers.
     #[arg(long, default_value_t = -1)]
     n_gpu_layers: i32,
+    /// Context window size in tokens. `0` (default) auto-tunes from
+    /// available VRAM under the 80%-of-total budget.
+    #[arg(long, default_value_t = 0)]
+    n_ctx: u32,
     /// Sampling temperature.
     #[arg(long, default_value_t = 0.7)]
     temperature: f32,
@@ -108,6 +112,16 @@ fn run_doctor() {
     println!("  compute backend : {backend} ({})", backend.describe());
     println!("  os              : {}", std::env::consts::OS);
     println!("  arch            : {}", std::env::consts::ARCH);
+    match detect_primary_gpu_vram() {
+        Some(v) => {
+            let total_gib = v.total_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            let free_gib = v.free_bytes() as f64 / (1024.0 * 1024.0 * 1024.0);
+            println!("  gpu vram        : {free_gib:.2} GiB free / {total_gib:.2} GiB total");
+        }
+        None => {
+            println!("  gpu vram        : <undetected — non-AMD or DRM sysfs unavailable>");
+        }
+    }
     println!(
         "  models dir      : {}",
         dirs::data_dir()
@@ -131,15 +145,17 @@ async fn run_chat(args: ChatArgs) -> Result<()> {
     let load_start = Instant::now();
     let load_params = ModelLoadParams {
         n_gpu_layers: args.n_gpu_layers,
+        n_ctx: args.n_ctx,
         ..Default::default()
     };
     let provider =
         EmbeddedProvider::load(&args.model, &load_params).context("failed to load model")?;
     eprintln!(
-        "[oma chat] model `{}` loaded in {} ms (context {} tokens)",
+        "[oma chat] model `{}` loaded in {} ms (context {} tokens — {})",
         provider.model_name(),
         load_start.elapsed().as_millis(),
         provider.context_length(),
+        provider.auto_tune().reason,
     );
 
     let sampling = SamplingControls {
