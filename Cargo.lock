@@ -1515,6 +1515,7 @@ dependencies = [
  "clap",
  "dirs",
  "oma_core",
+ "oma_models",
  "oma_protocol",
  "oma_provider",
  "oma_tools",
