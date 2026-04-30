@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use async_trait::async_trait;
 use tokio::sync::mpsc::Sender;
 
@@ -13,6 +15,12 @@ pub struct CompletionRequest {
     pub tools: Vec<ToolDefinition>,
     pub sampling: SamplingControls,
     pub max_tokens: Option<u32>,
+    /// Optional path to a KV-cache snapshot file. When set, providers that
+    /// support it (today: [`crate::EmbeddedProvider`]) load the snapshot
+    /// before tokenising — skipping prompt-eval over the prefix the
+    /// snapshot covers — and atomically rewrite the file at the end of
+    /// generation. Providers that don't support snapshots ignore this.
+    pub kv_cache_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone)]

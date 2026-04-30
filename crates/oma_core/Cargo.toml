@@ -13,10 +13,12 @@ oma_provider = { workspace = true }
 oma_tools    = { workspace = true }
 
 async-trait = { workspace = true }
+chrono      = { workspace = true }
 serde       = { workspace = true }
 serde_json  = { workspace = true }
 toml        = { workspace = true }
 thiserror   = { workspace = true }
+uuid        = { workspace = true }
 dirs        = { workspace = true }
 tokio       = { version = "1", default-features = false, features = ["sync", "time", "macros"] }
 tracing     = { workspace = true }

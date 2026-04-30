@@ -7,7 +7,11 @@ pub mod agent;
 pub mod config;
 pub mod context;
 pub mod error;
+pub mod session;
 
+pub use agent::{
+    Agent, AgentEvent, ApprovalRequest, TURN_STEP_CAP, TurnError, TurnSummary, UserAction,
+};
 pub use config::{
     AgentOverrides, ContextConfig, GlobalConfig, ProjectConfig, ToolsConfig, load_effective,
 };
@@ -16,4 +20,8 @@ pub use config::{
 // oma_core without a circular dependency.
 pub use context::{AgentContext, GitInfo, OsInfo};
 pub use error::{OmaError, Result};
-pub use oma_protocol::ApprovalMode;
+pub use oma_protocol::{ApprovalMode, SessionId};
+pub use session::{
+    ListedSession, LoadedSession, RolloutStore, SessionConfig, SessionState, TokenBudget,
+    find_latest, list_sessions, load_session, locate,
+};
