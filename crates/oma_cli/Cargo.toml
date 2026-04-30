@@ -11,6 +11,12 @@ repository.workspace = true
 name = "oma"
 path = "src/main.rs"
 
+[features]
+default = ["vulkan"]
+vulkan  = ["oma_provider/vulkan"]
+rocm    = ["oma_provider/rocm"]
+dual    = ["oma_provider/dual"]
+
 [dependencies]
 clap               = { workspace = true }
 tokio              = { workspace = true }
@@ -20,7 +26,7 @@ anyhow             = { workspace = true }
 
 oma_core     = { workspace = true }
 oma_protocol = { workspace = true }
-oma_provider = { workspace = true }
+oma_provider = { workspace = true, default-features = false }
 oma_tools    = { workspace = true }
 oma_tui      = { workspace = true }
 

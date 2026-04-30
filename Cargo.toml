@@ -27,7 +27,7 @@ repository = "https://github.com/lobinuxsoft/oh-my-agent"
 # Internal crates
 oma_core     = { path = "crates/oma_core" }
 oma_protocol = { path = "crates/oma_protocol" }
-oma_provider = { path = "crates/oma_provider" }
+oma_provider = { path = "crates/oma_provider", default-features = false }
 oma_tools    = { path = "crates/oma_tools" }
 oma_tasks    = { path = "crates/oma_tasks" }
 oma_safety   = { path = "crates/oma_safety" }
