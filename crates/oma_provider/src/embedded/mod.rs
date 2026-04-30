@@ -82,11 +82,13 @@ impl EmbeddedProvider {
         let model = LlamaModel::load_from_file(&backend, model_path, &model_params)
             .map_err(|e| LlmError::Load(format!("{}: {e}", model_path.display())))?;
 
-        // VRAM is queried *after* the model loads so the "free" figure
-        // already excludes the model weights — the remainder is what
-        // the KV cache actually has to fit in.
+        // VRAM probe runs against the GPU's TOTAL — not free — bytes,
+        // because the budget rule is anchored on capacity (model + KV
+        // ≤ 80% of total), not on what other processes happen to be
+        // holding at probe time. The auto-tuner refuses to load a
+        // model whose file size already breaks that envelope.
         let vram = detect_primary_gpu_vram();
-        let auto_tune = auto_tune_n_ctx(&model, params.n_ctx, vram);
+        let auto_tune = auto_tune_n_ctx(&model, params.n_ctx, vram, model_path)?;
         let context_length = auto_tune.n_ctx as usize;
 
         // Start with either an explicit override or the filename heuristic,
