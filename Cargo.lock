@@ -1515,6 +1515,7 @@ dependencies = [
  "clap",
  "dirs",
  "oma_core",
+ "oma_models",
  "oma_protocol",
  "oma_provider",
  "oma_tools",
@@ -1554,6 +1555,16 @@ dependencies = [
 [[package]]
 name = "oma_mcp"
 version = "0.1.0"
+
+[[package]]
+name = "oma_models"
+version = "0.1.0"
+dependencies = [
+ "oma_provider",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
 
 [[package]]
 name = "oma_protocol"

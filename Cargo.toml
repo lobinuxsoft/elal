@@ -4,6 +4,7 @@ members = [
     "crates/oma_core",
     "crates/oma_protocol",
     "crates/oma_provider",
+    "crates/oma_models",
     "crates/oma_tools",
     "crates/oma_tasks",
     "crates/oma_safety",
@@ -28,6 +29,7 @@ repository = "https://github.com/lobinuxsoft/oh-my-agent"
 oma_core     = { path = "crates/oma_core" }
 oma_protocol = { path = "crates/oma_protocol" }
 oma_provider = { path = "crates/oma_provider", default-features = false }
+oma_models   = { path = "crates/oma_models", default-features = false }
 oma_tools    = { path = "crates/oma_tools" }
 oma_tasks    = { path = "crates/oma_tasks" }
 oma_safety   = { path = "crates/oma_safety" }
