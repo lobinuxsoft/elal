@@ -146,7 +146,8 @@ pub async fn run(args: AgentArgs) -> Result<()> {
         provider.auto_tune().reason,
     );
 
-    let tools = ToolRegistry::new();
+    let mut tools = ToolRegistry::new();
+    tools.register_defaults();
     let approval_mode = ApprovalMode::Never;
     let mut agent = Agent::new(provider, &tools, &args.system, approval_mode, &cwd);
 

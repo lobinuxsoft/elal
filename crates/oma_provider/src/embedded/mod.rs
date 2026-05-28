@@ -44,11 +44,12 @@ impl Default for ModelLoadParams {
         Self {
             n_gpu_layers: -1,
             n_ctx: 0,
-            // 4096 fits agent prompts that include the full tool catalog
-            // (11 tool JSON schemas + system + first user message). The
-            // upstream llama.cpp default of 512 fails GGML_ASSERT(n_tokens
-            // <= n_batch) on the very first decode in agent mode.
-            n_batch: 4096,
+            // 8192 fits agent prompts that include the full tool catalog
+            // (13 default tools + system + first user message — observed
+            // 4714 tokens on Qwen3-1.7B template). Upstream llama.cpp's
+            // default of 512 fails GGML_ASSERT(n_tokens <= n_batch) on the
+            // very first decode in agent mode.
+            n_batch: 8192,
             capabilities: None,
         }
     }

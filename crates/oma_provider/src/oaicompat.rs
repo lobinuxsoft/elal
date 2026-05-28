@@ -13,7 +13,7 @@
 //!   `ToolCallInputDelta`, `ToolCallEnd` — in the right order and with
 //!   start/end bookends generated from state transitions.
 
-use oma_protocol::{StreamEvent, ToolDefinition};
+use oma_protocol::{Message, StreamEvent, ToolDefinition};
 use serde::Deserialize;
 use serde_json::{Value, json};
 
@@ -50,8 +50,16 @@ struct OaiFunctionDelta {
     arguments: Option<String>,
 }
 
+/// Serialize our `Message` slice to the OpenAI-compatible JSON array
+/// `apply_chat_template_oaicompat` consumes as `messages_json`. Role enum
+/// serializes lowercase ("system" / "user" / "assistant" / "tool") and
+/// optional fields skip when None, matching the OpenAI chat schema.
+pub(crate) fn messages_to_json(messages: &[Message]) -> Result<String, LlmError> {
+    serde_json::to_string(messages).map_err(|e| LlmError::Serialize(e.to_string()))
+}
+
 /// Serialize our `ToolDefinition` slice to the JSON array
-/// `apply_chat_template_with_tools_oaicompat` consumes as `tools_json`.
+/// `apply_chat_template_oaicompat` consumes as `tools_json`.
 pub(crate) fn tools_to_json(tools: &[ToolDefinition]) -> Result<String, LlmError> {
     let arr: Vec<Value> = tools
         .iter()

@@ -6,14 +6,14 @@
 //! - [`build_plain_prompt`] for requests without tools — the fast path that
 //!   uses `LlamaModel::apply_chat_template` directly.
 //! - [`build_oaicompat_prompt`] for tool-bearing requests — wraps
-//!   `apply_chat_template_with_tools_oaicompat` and returns the
-//!   [`ToolPromptSetup`] bundle the streaming loop needs to configure its
-//!   sampler and delta parser.
+//!   `apply_chat_template_oaicompat` with `enable_thinking: false` and
+//!   returns the [`ToolPromptSetup`] bundle the streaming loop needs to
+//!   configure its sampler and delta parser.
 
 use llama_cpp_2::model::{
     GrammarTrigger, GrammarTriggerType, LlamaChatMessage, LlamaChatTemplate, LlamaModel,
 };
-use llama_cpp_2::openai::ChatParseStateOaicompat;
+use llama_cpp_2::openai::{ChatParseStateOaicompat, OpenAIChatTemplateParams};
 use llama_cpp_2::token::LlamaToken;
 use oma_protocol::{Message, Role, ToolDefinition};
 
@@ -96,19 +96,34 @@ pub(super) fn build_oaicompat_prompt(
     let tmpl = chat_template
         .ok_or_else(|| LlmError::ChatTemplate("model has no embedded chat template".into()))?;
 
-    let chat: Vec<LlamaChatMessage> = messages
-        .iter()
-        .map(|m| {
-            let role = role_to_string(m.role);
-            let content = m.content.clone().unwrap_or_default();
-            LlamaChatMessage::new(role, content).map_err(|e| LlmError::ChatTemplate(e.to_string()))
-        })
-        .collect::<Result<_, _>>()?;
-
+    let messages_json = oaicompat::messages_to_json(messages)?;
     let tools_json = oaicompat::tools_to_json(tools)?;
 
+    // `enable_thinking: false` is the upstream-documented workaround for the
+    // llama.cpp lazy-grammar crash (`GGML_ASSERT(!stacks.empty())` in
+    // llama-grammar.cpp:940) that fires when a thinking-capable Qwen3 model
+    // emits `</think>\n\n<tool_call>` — the trigger regex matches but the
+    // grammar stack has already been consumed by the preceding `<think>`
+    // block. See ggml-org/llama.cpp#20345 and #21017.
+    let params = OpenAIChatTemplateParams {
+        messages_json: &messages_json,
+        tools_json: Some(&tools_json),
+        tool_choice: None,
+        json_schema: None,
+        grammar: None,
+        reasoning_format: None,
+        chat_template_kwargs: None,
+        add_generation_prompt: true,
+        use_jinja: true,
+        parallel_tool_calls: true,
+        enable_thinking: false,
+        add_bos: true,
+        add_eos: false,
+        parse_tool_calls: true,
+    };
+
     let result = model
-        .apply_chat_template_with_tools_oaicompat(tmpl, &chat, Some(&tools_json), None, true)
+        .apply_chat_template_oaicompat(tmpl, &params)
         .map_err(|e| LlmError::ChatTemplate(e.to_string()))?;
 
     let parse_state = if result.parse_tool_calls {
@@ -121,15 +136,16 @@ pub(super) fn build_oaicompat_prompt(
         None
     };
 
-    let grammar = result.grammar.clone().map(|g| {
-        let (trigger_patterns, trigger_tokens) = split_triggers(&result.grammar_triggers);
-        GrammarConfig {
-            grammar: g,
-            lazy: result.grammar_lazy,
-            trigger_patterns,
-            trigger_tokens,
-        }
-    });
+    // Grammar enforcement is intentionally disabled. The upstream lazy-grammar
+    // path crashes on `<tool_call>` triggers when any tokens precede the tag
+    // (`</think>`, transitional text, the empty `<think></think>` placeholder
+    // emitted with `enable_thinking: false`, etc.) — see
+    // ggml-org/llama.cpp#21017, #20345, #20260. Following the same model as
+    // the upstream sibling project (claw-code-rust): rely entirely on the
+    // PEG-based `ChatParseStateOaicompat` parser above to classify deltas
+    // post-hoc into `tool_calls`, `reasoning_content`, and `content`.
+    let _ = split_triggers; // keep the helper alive for future re-enable
+    let grammar: Option<GrammarConfig> = None;
 
     Ok(ToolPromptSetup {
         prompt: result.prompt,
