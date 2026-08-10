@@ -1,0 +1,40 @@
+[package]
+name = "elal_cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "elal"
+path = "src/main.rs"
+
+[features]
+default = ["vulkan"]
+vulkan  = ["elal_provider/vulkan", "elal_models/vulkan"]
+rocm    = ["elal_provider/rocm", "elal_models/rocm"]
+dual    = ["elal_provider/dual", "elal_models/dual"]
+
+[dependencies]
+clap               = { workspace = true }
+tokio              = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow             = { workspace = true }
+
+elal_core     = { workspace = true }
+elal_protocol = { workspace = true }
+elal_provider = { workspace = true, default-features = false }
+elal_models   = { workspace = true, default-features = false }
+elal_tools    = { workspace = true }
+elal_tui      = { workspace = true }
+
+chrono     = { workspace = true }
+dirs       = { workspace = true }
+serde_json = { workspace = true }
+uuid       = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

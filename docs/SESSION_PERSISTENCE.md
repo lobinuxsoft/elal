@@ -1,13 +1,13 @@
 # Session Persistence
 
-How `oma agent` keeps a conversation across process restarts: on-disk
+How `elal agent` keeps a conversation across process restarts: on-disk
 layout, JSONL contract, sidecar atomicity, resume semantics, and the
 opt-in KV-cache snapshot path.
 
 ## On-disk layout
 
-Sessions live under `OMA_DATA_ROOT` (defaults to `dirs::data_dir()/oh-my-agent`,
-which is `~/.local/share/oh-my-agent` on Linux). One directory per UTC
+Sessions live under `ELAL_DATA_ROOT` (defaults to `dirs::data_dir()/elal`,
+which is `~/.local/share/elal` on Linux). One directory per UTC
 calendar day; one rollout file per session:
 
 ```
@@ -22,9 +22,9 @@ calendar day; one rollout file per session:
 - `<rollout>.kv` — `LlamaContext` state snapshot, only when the session
   was opened with `--save-kv-cache`.
 
-Override via `OMA_DATA_ROOT=<path>` for sandboxes / integration tests.
+Override via `ELAL_DATA_ROOT=<path>` for sandboxes / integration tests.
 
-## JSONL contract (`oma_protocol::session`)
+## JSONL contract (`elal_protocol::session`)
 
 Every line in the rollout file is a tagged JSON object that deserializes
 to `RolloutLine`. The first line is always `RolloutLine::SessionMeta`;
@@ -54,16 +54,16 @@ temp-file + rename (`<sidecar>.tmp` → `<sidecar>`). Same-filesystem
 rename is atomic on POSIX; cross-fs writes surface as `std::io::Error`.
 
 The sidecar mirrors mutating fields (`updated_at`, `total_*_tokens`,
-`title`, `first_user_message`) so `oma sessions list` answers in O(1)
+`title`, `first_user_message`) so `elal sessions list` answers in O(1)
 per session without replaying the full JSONL. The JSONL remains the
 authoritative source — when the sidecar is missing or corrupt, the
 query layer falls back to a full replay.
 
 ## Resume semantics (`Agent::resume_session`)
 
-`oma agent --continue` and `--resume <id>`:
+`elal agent --continue` and `--resume <id>`:
 
-1. `oma_core::session::query::{find_latest, locate}` resolves the
+1. `elal_core::session::query::{find_latest, locate}` resolves the
    target rollout. `--continue` matches by `cwd`; `--resume` by
    `SessionId`.
 2. `load_session(rollout)` replays the JSONL into `LoadedSession`:
@@ -100,9 +100,9 @@ tight.
 
 The CLI surfaces the decision at startup:
 
-- `[oma agent] kv-cache enabled at <path>` — snapshot will load (if
+- `[elal agent] kv-cache enabled at <path>` — snapshot will load (if
   present) and rewrite at end of turn.
-- `[oma agent] --save-kv-cache: refusing to load snapshot — <reason>` —
+- `[elal agent] --save-kv-cache: refusing to load snapshot — <reason>` —
   SHA mismatch or missing-but-still-empty case; the flag still enables
   saving going forward.
 
@@ -120,10 +120,10 @@ The CLI surfaces the decision at startup:
 
 ## Where to look
 
-- Wire types — `crates/oma_protocol/src/session.rs`
-- Writer — `crates/oma_core/src/session/rollout.rs`
-- Replay — `crates/oma_core/src/session/replay.rs`
-- Query / listing — `crates/oma_core/src/session/query.rs`
-- Agent integration — `crates/oma_core/src/agent/persist.rs`
-- KV snapshots — `crates/oma_provider/src/kv_snapshot.rs`
-- CLI surface — `crates/oma_cli/src/{agent_cmd,sessions_cmd}.rs`
+- Wire types — `crates/elal_protocol/src/session.rs`
+- Writer — `crates/elal_core/src/session/rollout.rs`
+- Replay — `crates/elal_core/src/session/replay.rs`
+- Query / listing — `crates/elal_core/src/session/query.rs`
+- Agent integration — `crates/elal_core/src/agent/persist.rs`
+- KV snapshots — `crates/elal_provider/src/kv_snapshot.rs`
+- CLI surface — `crates/elal_cli/src/{agent_cmd,sessions_cmd}.rs`

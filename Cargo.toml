@@ -1,19 +1,19 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/oma_core",
-    "crates/oma_protocol",
-    "crates/oma_provider",
-    "crates/oma_models",
-    "crates/oma_tools",
-    "crates/oma_tasks",
-    "crates/oma_safety",
-    "crates/oma_mcp",
-    "crates/oma_client",
-    "crates/oma_server",
-    "crates/oma_tui",
-    "crates/oma_cli",
-    "crates/oma_utils",
+    "crates/elal_core",
+    "crates/elal_protocol",
+    "crates/elal_provider",
+    "crates/elal_models",
+    "crates/elal_tools",
+    "crates/elal_tasks",
+    "crates/elal_safety",
+    "crates/elal_mcp",
+    "crates/elal_client",
+    "crates/elal_server",
+    "crates/elal_tui",
+    "crates/elal_cli",
+    "crates/elal_utils",
 ]
 
 [workspace.package]
@@ -22,22 +22,22 @@ edition = "2024"
 license = "MIT"
 rust-version = "1.85"
 authors = ["lobinuxsoft"]
-repository = "https://github.com/lobinuxsoft/oh-my-agent"
+repository = "https://github.com/lobinuxsoft/elal"
 
 [workspace.dependencies]
 # Internal crates
-oma_core     = { path = "crates/oma_core" }
-oma_protocol = { path = "crates/oma_protocol" }
-oma_provider = { path = "crates/oma_provider", default-features = false }
-oma_models   = { path = "crates/oma_models", default-features = false }
-oma_tools    = { path = "crates/oma_tools" }
-oma_tasks    = { path = "crates/oma_tasks" }
-oma_safety   = { path = "crates/oma_safety" }
-oma_mcp      = { path = "crates/oma_mcp" }
-oma_client   = { path = "crates/oma_client" }
-oma_server   = { path = "crates/oma_server" }
-oma_tui      = { path = "crates/oma_tui" }
-oma_utils    = { path = "crates/oma_utils" }
+elal_core     = { path = "crates/elal_core" }
+elal_protocol = { path = "crates/elal_protocol" }
+elal_provider = { path = "crates/elal_provider", default-features = false }
+elal_models   = { path = "crates/elal_models", default-features = false }
+elal_tools    = { path = "crates/elal_tools" }
+elal_tasks    = { path = "crates/elal_tasks" }
+elal_safety   = { path = "crates/elal_safety" }
+elal_mcp      = { path = "crates/elal_mcp" }
+elal_client   = { path = "crates/elal_client" }
+elal_server   = { path = "crates/elal_server" }
+elal_tui      = { path = "crates/elal_tui" }
+elal_utils    = { path = "crates/elal_utils" }
 
 # LLM inference (embedded) — Vulkan default, ROCm feature-gated (ADR-1, ADR-2)
 llama-cpp-2 = { version = "0.1", default-features = false, features = ["sampler", "openmp"] }
