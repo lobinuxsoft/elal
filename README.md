@@ -141,3 +141,8 @@ Environment overrides: `ELAL_DATA_ROOT` (data root), `ELAL_LOG` (log level).
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+The session, protocol and approval layers port code from
+[claw-code-rust](https://github.com/7df-lab/claw-code-rust) (MIT). Every file that carries ported
+code names its origin in the module docs; the full attribution and license text live in
+[THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
