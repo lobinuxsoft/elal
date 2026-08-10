@@ -1,27 +1,24 @@
 # Third-party licenses
 
-Elal includes code ported and adapted from the projects listed below.
-Each file that carries ported code says so in its module documentation.
-
----
-
 ## claw-code-rust
 
-Source: <https://github.com/7df-lab/claw-code-rust>
+Source: <https://github.com/7df-lab/claw-code-rust> — MIT, © 2026 wangtsiao
 
-Ported or adapted in:
+Elal's session and conversation-record layers carry code ported from that project. The files below
+contain adapted implementations, not just a shared idea:
 
-- `crates/elal_core/src/session/replay.rs`
-- `crates/elal_core/src/session/rollout.rs`
-- `crates/elal_core/src/session/state.rs`
-- `crates/elal_protocol/src/approval.rs`
-- `crates/elal_protocol/src/session.rs`
-- `crates/elal_provider/src/embedded/prompt.rs`
-- `crates/elal_tools/src/approval.rs`
-- `crates/elal_tools/src/lib.rs`
-- `crates/elal_tools/src/spec.rs`
+- `crates/elal_core/src/session/state.rs` — `SessionState` and the compaction policy
+- `crates/elal_core/src/session/rollout.rs` — the `RolloutStore` append-only journal
+- `crates/elal_protocol/src/session.rs` — conversation record shapes (`TurnItem` subset)
+- `crates/elal_protocol/src/approval.rs` — approval mode shape
 
-License:
+Each of those files names its origin in its module documentation.
+
+Other files reference `claw-code-rust` only as an architectural reference — where a responsibility
+sits, how a policy is shaped — with no code taken. Ideas are not licensed; those need no notice and
+are not listed here.
+
+### License text
 
 ```
 MIT License
@@ -43,6 +40,6 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALING IN THE
 SOFTWARE.
 ```
