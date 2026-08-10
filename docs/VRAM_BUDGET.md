@@ -21,7 +21,7 @@ or release memory; basing the budget on free bytes silently invites
 OOM the moment a browser tab opens or a compositor pre-allocates.
 Total bytes are a hardware constant — anchoring there means the
 budget is the same on every load and the user can predict it from
-`oma doctor`.
+`elal doctor`.
 
 The 20% headroom assumes the user understands that other GPU
 workloads also need to fit. It is **not** a safety net against the
@@ -49,7 +49,7 @@ catalog + first user message anyway.
 
 ## Override: `--n-ctx <u32>`
 
-Both `oma agent` and `oma chat` accept `--n-ctx`:
+Both `elal agent` and `elal chat` accept `--n-ctx`:
 
 | Value         | Behaviour                                                |
 | ------------- | -------------------------------------------------------- |
@@ -65,7 +65,7 @@ file size is over the 80% budget on a given GPU.
 When the model can't live in VRAM at all, push it to RAM:
 
 ```
-oma agent --new --model <huge.gguf> --n-gpu-layers 0
+elal agent --new --model <huge.gguf> --n-gpu-layers 0
 ```
 
 VRAM probe is irrelevant on this path; `auto_tune_n_ctx` falls back
@@ -85,15 +85,15 @@ responsible for not OOM-killing the box.
 
 ## Where to look
 
-- Rule + auto-tuner — `crates/oma_provider/src/auto_tune.rs`
+- Rule + auto-tuner — `crates/elal_provider/src/auto_tune.rs`
   (`VRAM_BUDGET_FRACTION`, `auto_tune_n_ctx`, `max_ctx_for_vram`).
-- VRAM probe — `crates/oma_provider/src/hardware.rs`
+- VRAM probe — `crates/elal_provider/src/hardware.rs`
   (`detect_primary_gpu_vram`; AMD via DRM sysfs only — non-AMD GPUs
   return `None` and trigger the CPU-style fallback).
-- CLI plumbing — `oma agent --n-ctx`, `oma chat --n-ctx`,
-  `oma doctor` GPU VRAM line.
+- CLI plumbing — `elal agent --n-ctx`, `elal chat --n-ctx`,
+  `elal doctor` GPU VRAM line.
 - Refuse-to-load message — `LlmError::Load` propagated through
-  `EmbeddedProvider::load` in `crates/oma_provider/src/embedded/mod.rs`.
+  `EmbeddedProvider::load` in `crates/elal_provider/src/embedded/mod.rs`.
 
 ## Out of scope (open follow-ups)
 

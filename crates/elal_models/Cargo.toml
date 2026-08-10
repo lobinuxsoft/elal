@@ -1,0 +1,25 @@
+[package]
+name = "elal_models"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[features]
+# Feature pass-through to elal_provider so the consumer (elal_cli) can
+# pick the compute backend at build time. Defaults match elal_cli.
+default = ["vulkan"]
+vulkan  = ["elal_provider/vulkan"]
+rocm    = ["elal_provider/rocm"]
+dual    = ["elal_provider/dual"]
+
+[dependencies]
+elal_provider = { workspace = true, default-features = false }
+
+thiserror = { workspace = true }
+tracing   = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

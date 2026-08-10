@@ -479,6 +479,136 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
 
 [[package]]
+name = "elal_cli"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "clap",
+ "dirs",
+ "elal_core",
+ "elal_models",
+ "elal_protocol",
+ "elal_provider",
+ "elal_tools",
+ "elal_tui",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+]
+
+[[package]]
+name = "elal_client"
+version = "0.1.0"
+
+[[package]]
+name = "elal_core"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "dirs",
+ "elal_protocol",
+ "elal_provider",
+ "elal_tools",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "toml",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "elal_mcp"
+version = "0.1.0"
+
+[[package]]
+name = "elal_models"
+version = "0.1.0"
+dependencies = [
+ "elal_provider",
+ "tempfile",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
+name = "elal_protocol"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
+name = "elal_provider"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "elal_protocol",
+ "llama-cpp-2",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "elal_safety"
+version = "0.1.0"
+
+[[package]]
+name = "elal_server"
+version = "0.1.0"
+
+[[package]]
+name = "elal_tasks"
+version = "0.1.0"
+
+[[package]]
+name = "elal_tools"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "elal_protocol",
+ "globwalk",
+ "grep-matcher",
+ "grep-regex",
+ "grep-searcher",
+ "htmd",
+ "httpmock",
+ "reqwest",
+ "scraper",
+ "serde",
+ "serde_json",
+ "similar",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "walkdir",
+]
+
+[[package]]
+name = "elal_tui"
+version = "0.1.0"
+
+[[package]]
+name = "elal_utils"
+version = "0.1.0"
+
+[[package]]
 name = "encoding_rs"
 version = "0.8.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1505,136 +1635,6 @@ checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
 ]
-
-[[package]]
-name = "oma_cli"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "chrono",
- "clap",
- "dirs",
- "oma_core",
- "oma_models",
- "oma_protocol",
- "oma_provider",
- "oma_tools",
- "oma_tui",
- "serde_json",
- "tempfile",
- "tokio",
- "tracing",
- "tracing-subscriber",
- "uuid",
-]
-
-[[package]]
-name = "oma_client"
-version = "0.1.0"
-
-[[package]]
-name = "oma_core"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "chrono",
- "dirs",
- "oma_protocol",
- "oma_provider",
- "oma_tools",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
- "tokio",
- "toml",
- "tracing",
- "uuid",
-]
-
-[[package]]
-name = "oma_mcp"
-version = "0.1.0"
-
-[[package]]
-name = "oma_models"
-version = "0.1.0"
-dependencies = [
- "oma_provider",
- "tempfile",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "oma_protocol"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
-name = "oma_provider"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "llama-cpp-2",
- "oma_protocol",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
-]
-
-[[package]]
-name = "oma_safety"
-version = "0.1.0"
-
-[[package]]
-name = "oma_server"
-version = "0.1.0"
-
-[[package]]
-name = "oma_tasks"
-version = "0.1.0"
-
-[[package]]
-name = "oma_tools"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "globwalk",
- "grep-matcher",
- "grep-regex",
- "grep-searcher",
- "htmd",
- "httpmock",
- "oma_protocol",
- "reqwest",
- "scraper",
- "serde",
- "serde_json",
- "similar",
- "tempfile",
- "thiserror",
- "tokio",
- "tracing",
- "walkdir",
-]
-
-[[package]]
-name = "oma_tui"
-version = "0.1.0"
-
-[[package]]
-name = "oma_utils"
-version = "0.1.0"
 
 [[package]]
 name = "once_cell"
