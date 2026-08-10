@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon.svg" alt="Elal" width="140">
+</p>
+
 # Elal
 
 **A local-first AI coding agent in Rust, with the inference engine embedded in the binary.**
