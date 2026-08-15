@@ -11,9 +11,13 @@
 //!
 //! See <https://github.com/lobinuxsoft/elal/issues/7>.
 
+pub mod app;
+pub mod composer;
 pub mod history;
 pub mod terminal;
 
+#[cfg(test)]
+mod composer_tests;
 #[cfg(test)]
 mod history_tests;
 #[cfg(test)]
