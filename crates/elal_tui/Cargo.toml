@@ -8,3 +8,12 @@ authors.workspace = true
 repository.workspace = true
 
 [dependencies]
+crossterm     = { workspace = true }
+futures       = { workspace = true }
+ratatui       = { workspace = true }
+tokio         = { workspace = true }
+tracing       = { workspace = true }
+unicode-width = { workspace = true }
+
+[dev-dependencies]
+vt100 = "0.16"

@@ -17,7 +17,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.2"
 edition = "2024"
 license = "MIT"
 rust-version = "1.85"
@@ -67,8 +67,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-appender   = "0.2"
 
 # TUI
-ratatui       = "0.30"
-crossterm     = { version = "0.28", features = ["event-stream"] }
+# ratatui 0.30 pulls crossterm through `ratatui-crossterm`. Both must resolve to
+# the SAME crossterm or the `Color`/`Attribute` conversions between them stop
+# existing: two copies of a crate are two unrelated types to the compiler.
+ratatui       = { version = "0.30", features = ["crossterm_0_29"] }
+crossterm     = { version = "0.29", features = ["event-stream"] }
 unicode-width = "0.2"
 textwrap      = "0.16"
 
